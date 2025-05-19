@@ -1,0 +1,136 @@
+---
+title: "ST 695 Sequential Split Plot Designs"
+output: word_document
+date: "2025-05-11"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This code chunk produces a design matrix for a split plot design given the number of HTC Factors (HTC), Easy to Change Factors (ETC), and replicates for HTC Factors 
+```{r }
+
+HTC <- 2
+ETC <- 2
+r <- 2
+
+# Create the factors for the Design Matrix
+w_names <- paste0("w", 1:HTC)
+s_names <- paste0("s", 1:ETC)
+
+# Create list of w and s variables
+combined_list <- c(
+  setNames(replicate(HTC, c(-1, 1), simplify = FALSE), w_names),
+  setNames(replicate(ETC, c(-1, 1), simplify = FALSE), s_names)
+)
+
+# Create data frame of all combinations of w and s
+df <- expand.grid(combined_list) #base experimental design
+df_rep <- df[rep(seq_len(nrow(df)), r), ] #replicated experimental design
+row.names(df_rep) <- NULL #make the row count sequential
+
+# Build the formula for linear and interaction terms (no quadratic)
+linear_terms <- c(w_names, s_names)
+fo <- as.formula(
+  paste("~ (", paste(linear_terms, collapse = " + "), ")^2")
+)
+
+# Create the model matrix
+X <- model.matrix(fo, data = df_rep)
+colnames(X)[1] <- '0'
+
+```
+
+
+Simulate response data by specifying $\beta_r, \beta_{rs}, \sigma^2_B, \sigma^2$.
+The inputs to the simulation are Beta, sigma2_B, sigma2
+```{r}
+
+set.seed(1)
+  N <- r * 2^HTC # Number of Whole Plots
+  M <- 2^ETC #Number of Runs per Whole Plot
+  q <- ncol(X) # Number of Main Effects and Interaction Effects
+  n <- r*2^HTC*2*ETC  #Number of Experimental Observations
+  nsim <- 100  #Number of Simulation Runs
+
+  fixed_effect_names <- paste0("beta", colnames(X))
+  
+  beta <- setNames(rnorm(M), fixed_effect_names)  #assign values to fixed effect names
+  sigma2 <- 1  #assign value to sigma squared
+  sigma2_B <- 1 #assign value to sigma squared B
+
+#Simulation Function  
+sim_data <- function(X, beta) {
+  mu <- matrix(, nrow = n, ncol= M)
+  delta <- vector()
+  epsilon <- matrix()
+  
+      
+        for (i in 1:N) {
+        delta[i] <- rnorm(1, mean = 0, sd = sqrt(sigma2_B))
+        
+        for (j in 1:M) { 
+        epsilon[i,j] <- rnorm(1, mean = 0, sd = sqrt(sigma2))
+        
+        # Linear Terms
+        for (r in 1:q) {
+        mu[i,j] <- X[i,r] * beta[r] + delta[i] + epsilon [i,j]
+        }
+      }
+    }
+    return(mu)
+  }
+
+
+for (i in 1:nsim) {
+    Y <- sim_data(X, beta)
+    }
+
+```
+
+Simulation Summary Results
+```{r}
+
+sim_summary <- function(sim_df) {
+    beta_mean <- data.frame(matrix(NA, nrow = nsim, ncol = 23))
+    beta_lower <- data.frame(matrix(NA, nrow = nsim, ncol = 23))
+    beta_upper <- data.frame(matrix(NA, nrow = nsim, ncol = 23))
+    zero_captured <- data.frame(matrix(NA, nrow = nsim, ncol = 23))
+    param_captured <- data.frame(matrix(NA, nrow = nsim, ncol = 23))
+    
+    for (i in 1:nsim) {
+        for (j in 1:length(params)) {
+            beta_mean[i,j] <- sim_df[[i]]$statistics[names(params)[j], "Mean"]
+            beta_lower[i,j] <- sim_df[[i]]$quantiles[names(params)[j], "2.5%"]
+            beta_upper[i,j] <- sim_df[[i]]$quantiles[names(params)[j], "97.5%"]
+        }
+    }
+    
+    for (i in 1:nsim) {
+        for (j in 1:length(params)) {
+            zero_captured[i,j] <- (0 >= beta_lower[i,j] && 0 <= beta_upper[i,j])
+        }
+    }    
+    for (i in 1:nsim) {
+        for (j in 1:length(params)) {
+            param_captured[i,j] <- (params[[j]] >= beta_lower[i,j] && params[[j]] <= beta_upper[i,j])
+        }
+    }
+    
+    results <- data.frame(
+        "actual" = params,
+        "predicted" = sapply(beta_mean, mean),
+        "bias" = sapply(beta_mean, mean) - params,
+        "variance" = sapply(beta_mean, sd)^2,
+        "mse" = sapply(beta_mean, sd)^2 + (sapply(beta_mean, mean) - params)^2, # variance + bias^2
+        "prop 0 in CI" = sapply(zero_captured, mean),
+        "prop param in CI" = sapply(param_captured, mean),
+        check.names = FALSE
+    )
+    results <- data.frame(t(results))
+    results <- as.data.frame(lapply(results, round, digits = 3), check.names = FALSE, row.names = row.names(results))
+    return(results)
+}
+
+```
