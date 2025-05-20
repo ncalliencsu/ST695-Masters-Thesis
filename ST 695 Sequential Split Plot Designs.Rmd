@@ -51,20 +51,19 @@ set.seed(1)
   N <- r * 2^HTC # Number of Whole Plots
   M <- 2^ETC #Number of Runs per Whole Plot
   q <- ncol(X) # Number of Main Effects and Interaction Effects
-  n <- r*2^HTC*2*ETC  #Number of Experimental Observations
   nsim <- 100  #Number of Simulation Runs
 
   fixed_effect_names <- paste0("beta", colnames(X))
   
-  beta <- setNames(rnorm(M), fixed_effect_names)  #assign values to fixed effect names
+  beta <- setNames(rnorm(q), fixed_effect_names)  #assign values to fixed effect names
   sigma2 <- 1  #assign value to sigma squared
   sigma2_B <- 1 #assign value to sigma squared B
 
 #Simulation Function  
 sim_data <- function(X, beta) {
-  mu <- matrix(, nrow = n, ncol= M)
+  mu <- matrix(0, nrow = N, ncol= M)
   delta <- vector()
-  epsilon <- matrix()
+  epsilon <- matrix(0, N, M)
   
       
         for (i in 1:N) {
@@ -75,7 +74,7 @@ sim_data <- function(X, beta) {
         
         # Linear Terms
         for (r in 1:q) {
-        mu[i,j] <- X[i,r] * beta[r] + delta[i] + epsilon [i,j]
+        mu[i,j] <- mu[i,j] + X[i,r] * beta[r] + delta[i] + epsilon [i,j]
         }
       }
     }
