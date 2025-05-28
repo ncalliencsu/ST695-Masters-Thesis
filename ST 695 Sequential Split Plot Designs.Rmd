@@ -14,6 +14,7 @@ This code chunk produces a design matrix for a split plot design given the numbe
 HTC <- 2
 ETC <- 2
 r <- 2
+nsim <- 100
 
 # Create the factors for the Design Matrix
 w_names <- paste0("w", 1:HTC)
@@ -21,8 +22,8 @@ s_names <- paste0("s", 1:ETC)
 
 # Create list of w and s variables
 combined_list <- c(
-  setNames(replicate(HTC, c(-1, 1), simplify = FALSE), w_names),
-  setNames(replicate(ETC, c(-1, 1), simplify = FALSE), s_names)
+  setNames(replicate(ETC, c(-1, 1), simplify = FALSE), s_names),
+  setNames(replicate(HTC, c(-1, 1), simplify = FALSE), w_names)
 )
 
 # Create data frame of all combinations of w and s
@@ -43,58 +44,86 @@ colnames(X)[1] <- '0'
 ```
 
 
-Simulate response data by specifying $\beta_r, \beta_{rs}, \sigma^2_B, \sigma^2$.
-The inputs to the simulation are Beta, sigma2_B, sigma2
+Simulate response data by specifying $\beta_r, \beta_{rs}, \sigma^2_B, \sigma^2$. The inputs to the simulation are Beta, sigma2_B, sigma2. Repeat this process 100 times, each time you generate a Y, fit the model, and save the estimates. At the end you should have 100 estimates for the intercept, 100 for w1, etc. Then with the estimates you can plot a histogram of each one and they should all be centered at the true values (except for the variance histograms; those will be right skewed).
+
 ```{r}
 
-set.seed(1)
-  N <- r * 2^HTC # Number of Whole Plots
-  M <- 2^ETC #Number of Runs per Whole Plot
-  q <- ncol(X) # Number of Main Effects and Interaction Effects
-  n <- r * 2^HTC * 2^ETC
-  nsim <- 100  #Number of Simulation Runs
+library(lme4)
 
+set.seed(1)
+  dl <- as.factor(rep(seq(1, r*2^HTC), each = 2^ETC))  
+    
   fixed_effect_names <- paste0("beta", colnames(X))
   
-  beta <- setNames(rnorm(q), fixed_effect_names)  #assign values to fixed effect names
-  sigma2 <- 1  #assign value to sigma squared
-  sigma2_B <- 1 #assign value to sigma squared B
+  beta <- setNames(rnorm(length(fixed_effect_names)),
+  fixed_effect_names)  #assign values to fixed effect names
+
 
 #Simulation Function  
-sim_data <- function(X, beta) {
-  mu <- matrix(0, nrow = N, ncol= M)
-  delta <- vector()
-  epsilon <- matrix(0, N, M)
+sim_data <- function(X, beta, sigma2, sigma2_B, dl) {
   
-      
-        for (i in 1:N) {
-        delta[i] <- rnorm(1, mean = 0, sd = sqrt(sigma2_B))
-        
-        for (j in 1:M) { 
-        epsilon[i,j] <- rnorm(1, mean = 0, sd = sqrt(sigma2))
-        
-        # Linear Terms
-        for (r in 1:q) {
-        mu[i,j] <- mu[i,j] + X[i,r] * beta[r] 
-        }
-        mu[i,j] <- mu[i,j] + delta[i] + epsilon [i,j]
-      }
-    }
-    return(mu)
-  }
+  mu <- X %*% beta
+  n_groups <- length(unique(dl))
+  
+  
+#  T <- data.frame(replicate(runs,rnorm(n=n,mean=m,sd=sqrt(v))))
+    
+  delta <- rnorm(n_groups, mean = 0, sd = sqrt(sigma2_B))
+  delta <- rep(delta, times = table(dl))
+  
+  epsilon <- rnorm(nrow(X), mean = 0, sd = sqrt(sigma2))
+  
+  Y <- mu + delta + epsilon
+  
+  df <- data.frame(delta, df_rep, Y)
+  
+  fo <- as.formula(
+  paste("Y ~ (", paste(linear_terms, collapse = " + "), ")^2 + (1|delta)"))
+  
+  rmodel <- lmer(fo, data = df)
+  
+  # Extract fixed effects estimates
+  
+  fixed_effects <- as.list(fixef(rmodel))
 
-Y <- matrix(0, nrow = n , ncol = nsim )
-for (i in 1:nsim) {
-    Y[,i] <- sim_data(X, beta)
-    }
+# Extract variance-covariance matrix of fixed effects
+  random_effects <- VarCorr(rmodel)
+
+  varcomp <- as.data.frame(random_effects)
+
+  sigma2_B <- varcomp$vcov[1]
+  sigma2 <- varcomp$vcov[2]
+  
+  return(list(feff = fixed_effects, sigma2_B = sigma2_B, sigma2 = sigma2))
+
+}
+
+# Set up empty data frame
+
+sim_df <- data.frame(matrix(ncol = length(beta) + 2, nrow = 0))
+
+colnames(sim_df) <- c(colnames(X),"sigma2_B", "sigma2")
+
+#Run Simulation
+for(i in 1:nsim){
+ 
+  rmodel <- as.data.frame(sim_data(X, beta, sigma2 = 1, sigma2_B = 1, dl))
+  
+  sim_df <- rbind(sim_df, rmodel)
+
+}
+
+for (col in 1:ncol(sim_df)) {
+    hist(sim_df[,col], main=paste("Histogram of ", colnames(sim_df)[col]),  xlab=colnames(sim_df)[col])
+}
+
+
 
 ```
 
 Simulation Summary Results
 ```{r}
 
-colnames(Y) <- c(rep(paste0("Y",1:nsim)))
-summary.matrix(Y)
 
 
 ```
