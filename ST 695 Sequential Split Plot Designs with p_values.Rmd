@@ -146,6 +146,7 @@ pval_cols <- grep("^pvalue", colnames(sim_df), value = TRUE)
 sig_matrix <- sim_df[, pval_cols] < 0.05
 
 #rename the columns of sig matrix TPR.
+colnames(sig_matrix) <- gsub("pvalue", "TPR", colnames(sig_matrix))
 
 # Compute proportion significant for each estimate
 prop_sig <- colMeans(sig_matrix, na.rm = TRUE)
