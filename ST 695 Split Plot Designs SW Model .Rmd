@@ -89,8 +89,8 @@ The W Model is then analyzed (Whole Plot Factors only) and finally the S_W Model
 
 library(lmerTest)
 
-sigma2_W <- 0.2
-sigma2_S <- 1
+Sigma2_W <- 0.2
+Sigma2_S <- 1
 
 set.seed(1)
   dl <- as.factor(rep(seq(1, r*2^HTC), each = 2^ETC))  #delta as a factor
@@ -113,14 +113,14 @@ set.seed(1)
   mu_W <- X_W %*% beta_W
 
 #Simulation Function for S Model
-sim_model_S <- function(X_S, mu_S, mu_W, sigma2_S, sigma2_W, dl) {
+sim_model_S <- function(X_S, mu_S, mu_W, Sigma2_S, Sigma2_W, dl) {
   
   n_groups <- length(unique(dl))
   
-  epsilon_W <- rnorm(n_groups, mean = 0, sd = sqrt(sigma2_W))
+  epsilon_W <- rnorm(n_groups, mean = 0, sd = sqrt(Sigma2_W))
   epsilon_W <- rep(epsilon_W, times = table(dl))
   
-  epsilon_S <- rnorm(nrow(X_S), mean = 0, sd = sqrt(sigma2_S))
+  epsilon_S <- rnorm(nrow(X_S), mean = 0, sd = sqrt(Sigma2_S))
   
   Y_S <- mu_S + epsilon_W + epsilon_S
   Y_W <- mu_W + epsilon_W
@@ -137,12 +137,14 @@ sim_model_S <- function(X_S, mu_S, mu_W, sigma2_S, sigma2_W, dl) {
 
   fixed_effects_S <- rmodel_S$coefficients[, "Estimate"]
   pvalues_S <- rmodel_S$coefficients[, "Pr(>|t|)"]
-
+  
    
   # Extract and compute variance of random effects
   
-  sigma2_W <- (as.numeric(rmodel_S$varcor$epsilon_W))
-  sigma2_S <- (rmodel_S$sigma)^2
+  Sigma2_W <- (as.numeric(rmodel_S$varcor$epsilon_W))^2
+  Sigma2_S <- (rmodel_S$sigma)^2
+   
+  
  
    # Generate data frame of fixed and variable effects
   dffe_S <- as.data.frame(t(fixed_effects_S))
@@ -150,8 +152,11 @@ sim_model_S <- function(X_S, mu_S, mu_W, sigma2_S, sigma2_W, dl) {
   dffp_S <- as.data.frame(t(pvalues_S))
   colnames(dffp_S) <- paste0("pvalue_Model_S (", names(pvalues_S), ")")
   df_out_S <- cbind(dffe_S, dffp_S)
-  df_out_S$sigma2_W <- sigma2_W
-  df_out_S$sigma2_S <- sigma2_S
+  df_out_S$Sigma2_W <- Sigma2_W
+  df_out_S$Sigma2_S <- Sigma2_S
+  colnames(df_out_S)[colnames(df_out_S) == "Sigma2_W"] <- "Sigma2_W (Model S)"
+  colnames(df_out_S)[colnames(df_out_S) == "Sigma2_S"] <- "Sigma2_S (Model S)"
+  
   return(list(df_out_S = df_out_S, Y_W = Y_W, Y_S = Y_S))
   
 }
@@ -176,7 +181,7 @@ sim_model_W <- function(Y_W) {
   pvalues_W <- rmodel_W$coefficients[, "Pr(>|t|)"]
 
   # Extract and compute variance of random effects
-   sigma2_W <- rmodel_W$sigma
+   Sigma2_W <- (rmodel_W$sigma)^2
   
   
   # Combine into a data frame 
@@ -185,7 +190,8 @@ sim_model_W <- function(Y_W) {
   dffp_W <- as.data.frame(t(pvalues_W))
   colnames(dffp_W) <- paste0("pvalue_Model_W (", names(pvalues_W), ")")
   df_out_W <- cbind(dffe_W, dffp_W)
-  df_out_W$sigma2_W <- sigma2_W
+  df_out_W$Sigma2_W <- Sigma2_W
+  colnames(df_out_W)[colnames(df_out_W) == "Sigma2_W"] <- "Sigma2_W (Model W)"
   return(df_out_W)
   
 }
@@ -210,7 +216,7 @@ sim_model_SW <- function(X_SW, Y_S, Y_W) {
   pvalues_SW <- rmodel_SW$coefficients[, "Pr(>|t|)"]
 
   # Extract and compute variance of random effects
-   sigma2_S <- rmodel_SW$sigma
+   Sigma2_S <- (rmodel_SW$sigma)^2
 
    # Combine into a data frame
   dffe_SW <- as.data.frame(t(fixed_effects_SW))
@@ -218,7 +224,8 @@ sim_model_SW <- function(X_SW, Y_S, Y_W) {
   dffp_SW <- as.data.frame(t(pvalues_SW))
   colnames(dffp_SW) <- paste0("pvalue_Model_SW (", names(pvalues_SW), ")")
   df_out_SW <- cbind(dffe_SW, dffp_SW)
-  df_out_SW$sigma2_S <- sigma2_S
+  df_out_SW$Sigma2_S <- Sigma2_S
+  colnames(df_out_SW)[colnames(df_out_SW) == "Sigma2_S"] <- "Sigma2_S (Model SW)"
   return(df_out_SW)
 
 }
@@ -234,7 +241,7 @@ analyze <- function(sim_df) {
 
 
 #Plot Histograms of Variance Components
-varcomp_cols <- grep("^sigma", colnames(sim_df), value = TRUE)
+varcomp_cols <- grep("^Sigma", colnames(sim_df), value = TRUE)
   for (col in varcomp_cols){
     hist(sim_df[[col]], main = paste("Histogram of", col), xlab = col)
 }
@@ -266,7 +273,7 @@ sim_df_S_W <- data.frame()
 #Run Simulation
 for(i in 1:nsim){
  
-  sim_model_S_out <- sim_model_S(X_S, mu_S, mu_W, sigma2_S = sigma2_S, sigma2_W = sigma2_W, dl)
+  sim_model_S_out <- sim_model_S(X_S, mu_S, mu_W, Sigma2_S = Sigma2_S, Sigma2_W = Sigma2_W, dl)
   Y_W <- sim_model_S_out$Y_W
   Y_S <- sim_model_S_out$Y_S
   
