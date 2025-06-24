@@ -19,7 +19,7 @@ $y_{ikl}^{S} = \beta_0^* + \sum_{p=1}^{w} \beta_p x_{pi} + e_i^{W} + \sum_{q=1}^
 
 HTC <- 2
 ETC <- 2
-r <- 2
+r <- 1
 nsim <- 100
 
 # Create the factors for the Design Matrix
