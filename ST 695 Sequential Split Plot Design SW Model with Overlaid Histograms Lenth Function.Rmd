@@ -1,0 +1,391 @@
+---
+title: "ST 695 Sequential Split Plot Design SW Model"
+output: word_document
+date: "2025-06-17"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This code chunk produces a design matrix for a split plot design given the number of HTC Factors (HTC), Easy to Change Factors (ETC), and replicates for HTC Factors.  This model includes HTC and ETC Factors. The model of interest here is given by
+
+$y_{ikl}^{S} = \beta_0^* + \sum_{p=1}^{w} \beta_p x_{pi} + e_i^{W} + \sum_{q=1}^{s} \gamma_q z_{ikq} + e_{ik}^{S} + e_{ikl}^{SS}$
+```{r }
+
+################################################################################
+#Create the model matrix for X_S (Whole Plot and Split Plot Factors) 
+################################################################################
+
+HTC <- 2
+ETC <- 2
+r <- 2
+nsim <- 100
+
+# Create the factors for the Design Matrix
+w_names <- paste0("w", 1:HTC)
+s_names <- paste0("s", 1:ETC)
+
+# Create list of w and s variables
+combined_list <- c(
+  setNames(replicate(ETC, c(-1, 1), simplify = FALSE), s_names),
+  setNames(replicate(HTC, c(-1, 1), simplify = FALSE), w_names)
+)
+
+# Create data frame of all combinations of w and s
+df_S <- expand.grid(combined_list) #base experimental design
+df_rep_S <- df_S[rep(seq_len(nrow(df_S)), r), ] #replicated experimental design
+row.names(df_rep_S) <- NULL #make the row count sequential
+
+# Build the formula for linear and interaction terms (no quadratic)
+linear_terms_ws <- c(w_names, s_names)
+formula_S <- as.formula(
+  paste("~ (", paste(linear_terms_ws, collapse = " + "), ")^2")
+)
+
+# Create the model matrix for X_S (Split and Whole Plot Factors)
+X_S <- model.matrix(formula_S, data = df_rep_S)
+colnames(X_S)[1] <- '0'
+
+################################################################################
+#Create the model matrix for X_W (Whole Plot Factors)
+################################################################################
+
+#1. Create list of whole plot variables
+wpf_terms <- setNames(replicate(HTC, c(-1,1), simplify = FALSE), w_names)
+
+
+#2. Create data frame of all combinations of w
+df_W <- expand.grid(wpf_terms) #base experimental design
+df_rep_W <- df_W[rep(seq_len(nrow(df_W)), r), ] #replicated experimental design
+row.names(df_rep_W) <- NULL #make the row count sequential
+
+#3. Build the formula for linear and interaction terms (no quadratic)
+linear_terms_w <- w_names
+
+formula_W <- as.formula(
+  paste("~ (", paste(w_names, collapse = " + "), ")^2")
+)
+
+# Create the model matrix
+X_W <- X_S[, !grepl("s", colnames(X_S), ignore.case = TRUE)]
+
+################################################################################
+#Create the model matrix for X_SW (Y_S - Y_W Model)
+################################################################################
+
+#Remove columns with Whole Plot Terms only (Main Effects and Interaction of WPF)
+X_SW <- X_S[, grep('s|0', colnames(X_S), value = TRUE)] 
+colnames(X_SW) <- gsub(":", "_", colnames(X_SW)) #replace colons with underscores so lm can analyze the function.
+
+```
+
+
+Simulate response data. The inputs to the simulation are Beta, sigma2_W, sigma2_S. Repeat this process 100 times, each time you generate a Y, fit the model, and save the estimates.Plot a histogram of each estimate and they should all be centered at the true values (except for the variance histograms; those will be right skewed).  This is the S Model.
+
+The W Model is then analyzed (Whole Plot Factors only) and finally the S_W Model which is Y_S - Y_W.
+
+```{r}
+
+library(lmerTest)
+library(ggplot2)
+library(dplyr)
+
+Sigma2_W <- 1
+Sigma2_S <- 5
+
+set.seed(1)
+  WP <- as.factor(rep(seq(1, r*2^HTC), each = 2^ETC))  #delta as a factor
+    
+  fixed_effect_names_S <- paste0("beta", colnames(X_S))
+  fixed_effect_names_W <- paste0("beta", colnames(X_W))
+  
+  #beta <- setNames(rnorm(length(fixed_effect_names)
+  # fixed_effect_names)  #assign values to fixed effect names
+  effects <- c(5,1,5,1,0,0,5,0,1,0,0)
+  
+  #assign values to fixed effect names
+  beta_S <- setNames(effects, fixed_effect_names_S)  
+  names(beta_S)[1] <- "beta*0"
+  beta_W <- beta_S[!grepl("s", colnames(X_S), ignore.case = TRUE)]
+ 
+  
+  #Compute the means of S and W model
+  mu_S <- X_S %*% beta_S
+  mu_W <- X_W %*% beta_W
+
+#Simulation Function for S Model
+sim_model_S <- function(X_S, mu_S, mu_W, Sigma2_S, Sigma2_W, WP) {
+  
+  n_groups <- length(unique(WP))
+  
+  epsilon_W <- rnorm(n_groups, mean = 0, sd = sqrt(Sigma2_W))
+  epsilon_W <- rep(epsilon_W, times = table(WP))
+  
+  epsilon_S <- rnorm(nrow(X_S), mean = 0, sd = sqrt(Sigma2_S))
+  
+  Y_S <- mu_S + epsilon_W + epsilon_S
+  Y_W <- mu_W + epsilon_W
+
+  df_S <- data.frame(epsilon_W, df_rep_S, Y_S)
+  
+  formula_S <- as.formula(
+  paste("Y_S ~ (", paste(linear_terms_ws, collapse = " + "), ")^2 + (1|WP)"))
+  
+  rmodel_S <- summary(lmer(formula_S, data = df_S))
+  rownames(rmodel_S$coefficients) <- sub("\\(Intercept\\)", "Intercept", rownames(rmodel_S$coefficients))
+
+  # Extract fixed effects estimates
+
+  fixed_effects_S <- rmodel_S$coefficients[, "Estimate"]
+  pvalues_S <- rmodel_S$coefficients[, "Pr(>|t|)"]
+  
+   
+  # Extract and compute variance of random effects
+  
+  Sigma2_W <- (as.numeric(rmodel_S$varcor$WP))
+  Sigma2_S <- (rmodel_S$sigma)^2
+    
+  
+ 
+   # Generate data frame of fixed and variable effects
+  dffe_S <- as.data.frame(t(fixed_effects_S))
+  colnames(dffe_S) <- paste0("Fixed_Eff_Model_S (", names(fixed_effects_S), ")")
+  dffp_S <- as.data.frame(t(pvalues_S))
+  colnames(dffp_S) <- paste0("pvalue_Model_S (", names(pvalues_S), ")")
+  df_out_S <- cbind(dffe_S, dffp_S)
+  df_out_S$Sigma2_W <- if(length(Sigma2_W) == 0) NA else Sigma2_W
+  df_out_S$Sigma2_S <- if(length(Sigma2_S) == 0) NA else Sigma2_S
+  colnames(df_out_S)[colnames(df_out_S) == "Sigma2_W"] <- "Sigma2_W (Model S)"
+  colnames(df_out_S)[colnames(df_out_S) == "Sigma2_S"] <- "Sigma2_S (Model S)"
+  
+  return(list(df_out_S = df_out_S, Y_W = Y_W, Y_S = Y_S))
+  
+}
+
+#Simulation Function for W Model
+sim_model_W <- function(Y_W) {
+  
+  Y_W_unique <- unique(Y_W)  
+  df_W <- data.frame(df_rep_W, Y_W = Y_W_unique)
+
+  # Build the formula for linear and interaction terms (no quadratic)
+  linear_terms <- w_names
+
+  formula_W <- as.formula(
+  paste("Y_W ~ (", paste(w_names, collapse = " + "), ")^2"))
+  
+  rmodel_W <- summary(lm(formula_W, data = df_W))
+  rownames(rmodel_W$coefficients) <- sub("\\(Intercept\\)", "Intercept", rownames(rmodel_W$coefficients))
+
+  # Extract fixed effects estimates
+  fixed_effects_W <- rmodel_W$coefficients[, "Estimate"]
+  pvalues_W <- rmodel_W$coefficients[, "Pr(>|t|)"]
+
+  # Extract and compute variance of random effects
+   Sigma2_W <- (rmodel_W$sigma)^2
+  
+  
+  # Combine into a data frame 
+  dffe_W <- as.data.frame(t(fixed_effects_W))
+  colnames(dffe_W) <- paste0("Fixed_Eff_Model_W (", names(fixed_effects_W),")")
+  dffp_W <- as.data.frame(t(pvalues_W))
+  colnames(dffp_W) <- paste0("pvalue_Model_W (", names(pvalues_W), ")")
+  df_out_W <- cbind(dffe_W, dffp_W)
+  df_out_W$Sigma2_W <- Sigma2_W
+  colnames(df_out_W)[colnames(df_out_W) == "Sigma2_W"] <- "Sigma2_W (Model W)"
+  return(df_out_W)
+  
+}
+
+#Simulation Function for SW Model
+sim_model_SW <- function(X_SW, Y_S, Y_W) {
+
+    X_SW <- X_SW[,-1]
+    df_SW <- data.frame(Y_SW = Y_S - Y_W, X_SW)
+
+# Build the formula for linear and interaction terms (no quadratic)
+
+ formula_SW <- as.formula(
+  paste("Y_SW ~", paste(colnames(X_SW), collapse = " + "))
+)
+
+  rmodel_SW <- summary(lm(formula_SW, data = df_SW))
+  rownames(rmodel_SW$coefficients) <- sub("\\(Intercept\\)", "Intercept", rownames(rmodel_SW$coefficients))
+
+  # Extract fixed effects estimates
+
+  fixed_effects_SW <- rmodel_SW$coefficients[, "Estimate"]
+  pvalues_SW <- rmodel_SW$coefficients[, "Pr(>|t|)"]
+
+  # Extract and compute variance of random effects
+   Sigma2_S <- (rmodel_SW$sigma)^2
+
+   # Combine into a data frame
+  dffe_SW <- as.data.frame(t(fixed_effects_SW))
+  colnames(dffe_SW) <- paste0("Fixed_Eff_Model_SW (", names(fixed_effects_SW),")")
+  dffp_SW <- as.data.frame(t(pvalues_SW))
+  colnames(dffp_SW) <- paste0("pvalue_Model_SW (", names(pvalues_SW), ")")
+  df_out_SW <- cbind(dffe_SW, dffp_SW)
+  df_out_SW$Sigma2_S <- Sigma2_S
+  colnames(df_out_SW)[colnames(df_out_SW) == "Sigma2_S"] <- "Sigma2_S (Model SW)"
+  return(df_out_SW)
+
+}
+
+#Generate S, W and SW Models
+
+model_gen <- function(sim_df_S, sim_df_W, sim_df_SW) {
+  
+S_Model <- sim_df_S[, !grepl("pvalue", colnames(sim_df_S), ignore.case = TRUE)]
+W_Model <- sim_df_W[, !grepl("pvalue", colnames(sim_df_W), ignore.case = TRUE)]
+SW_Model <- sim_df_SW[, !grepl("pvalue", colnames(sim_df_SW), ignore.case = TRUE)] 
+
+
+colnames(S_Model) <- c(colnames(X_S), rep(NA, ncol(S_Model) - length(colnames(X_S))))
+colnames(S_Model)[1] <- "Intercept"
+colnames(S_Model)[(ncol(S_Model)-1):ncol(S_Model)] <- c("Sigma2_W", "Sigma2_S")
+
+colnames(W_Model) <- c(colnames(X_W), rep(NA, ncol(W_Model) - length(colnames(X_W))))
+colnames(W_Model)[1] <- "Intercept"
+colnames(W_Model)[ncol(W_Model)] <- "Sigma2_W"
+
+colnames(X_SW) <- gsub("_", ":", colnames(X_SW)) #restore colons for interaction terms.  
+colnames(SW_Model) <- c(colnames(X_SW), rep(NA, ncol(SW_Model) - length(colnames(X_SW))))
+colnames(SW_Model)[1] <- "Intercept"
+colnames(SW_Model)[ncol(SW_Model)] <- "Sigma2_S"
+
+return(list(S_Model = S_Model, W_Model = W_Model, SW_Model = SW_Model))
+}
+
+
+
+# Plot Histograms
+plot_overlaid_histograms <- function(S_Model, W_Model, SW_Model, bins = 20) {
+  for (col in colnames(S_Model)) {
+    # Combine data into long format
+    df_long <- bind_rows(
+      data.frame(value = S_Model[[col]], model = "S_Model"),
+      if (col %in% colnames(W_Model)) data.frame(value = W_Model[[col]], model = "W_Model"),
+      if (col %in% colnames(SW_Model)) data.frame(value = SW_Model[[col]], model = "SW_Model")
+    )
+    
+   # Plot
+    p <- ggplot(df_long, aes(x = value, fill = model, color = model)) +
+      geom_histogram(position = "identity", alpha = 0.4, bins = bins) +
+      labs(title = paste("Comparison:", col), x = col) +
+      theme_minimal()
+    print(p)
+  }
+}
+
+# Summary Table
+summary_table <- function(S_Model, W_Model, SW_Model) {
+  all_stats <- list()
+  for (col in colnames(S_Model)) {
+    stats_list <- list()
+    # S_Model stats
+    stats_list[["S_Model"]] <- summary(S_Model[[col]])
+    # W_Model stats if available
+    if (col %in% colnames(W_Model)) {
+      stats_list[["W_Model"]] <- summary(W_Model[[col]])
+    }
+    # SW_Model stats if available
+    if (col %in% colnames(SW_Model)) {
+      stats_list[["SW_Model"]] <- summary(SW_Model[[col]])
+    }
+    # Combine into a data frame if possible
+    stats_df <- tryCatch({
+      as.data.frame(stats_list)
+    }, error = function(e) {
+      stats_list
+    })
+    cat("\nSummary statistics for:", col, "\n")
+    print(stats_df)
+    all_stats[[col]] <- stats_df
+  }
+  return(all_stats)
+}
+
+# Set up empty data frames for simulation results
+
+sim_df_S <- data.frame()
+sim_df_W <- data.frame()
+sim_df_SW <- data.frame()
+  
+#Run Simulation
+for(i in 1:nsim){
+ 
+  sim_model_S_out <- sim_model_S(X_S, mu_S, mu_W, Sigma2_S = Sigma2_S, Sigma2_W = Sigma2_W, WP)
+  Y_W <- sim_model_S_out$Y_W
+  Y_S <- sim_model_S_out$Y_S
+  
+  rmodel_S <- as.data.frame(sim_model_S_out$df_out_S)
+  sim_df_S <- rbind(sim_df_S, rmodel_S)
+  
+  rmodel_W <- as.data.frame(sim_model_W(Y_W))
+  sim_df_W <- rbind(sim_df_W, rmodel_W)
+  
+  rmodel_SW <- as.data.frame(sim_model_SW(X_SW, Y_S, Y_W))
+  sim_df_SW <- rbind(sim_df_SW, rmodel_SW)
+ 
+}
+
+models <- model_gen(sim_df_S, sim_df_W, sim_df_SW)
+
+
+S_Model <- models$S_Model
+W_Model <- models$W_Model
+SW_Model <-models$SW_Model
+
+# Function to run Lenth method and return significant effect names
+run_lenth <- function(S_Model, r) {
+  if (r != 1) return(NULL)
+  library(BsMD)
+  effect_cols <- !(colnames(S_Model) %in% c("Intercept", "Sigma2_W", "Sigma2_S"))
+  mean_effects <- colMeans(S_Model[, effect_cols], na.rm = TRUE)
+  lenth_result <- BsMD::LenthPlot(mean_effects)  # will plot
+  cat("Lenth Method Thresholds:\n")
+  cat("ME  =", lenth_result["ME"], "\n")
+  cat("SME =", lenth_result["SME"], "\n\n")
+  significant_ME <- abs(mean_effects) > lenth_result["ME"]
+  sig_effect_names <- names(mean_effects)[significant_ME]
+  cat("Significant effects by Lenth method (|effect| > ME):\n")
+  print(sig_effect_names)
+  return(sig_effect_names)
+}
+
+# Run Lenth method and get significant effect names (only if r == 1)
+sig_effect_names <- run_lenth(S_Model, r)
+
+# If significant effects found, plot only those; otherwise plot all
+if (!is.null(sig_effect_names) && length(sig_effect_names) > 0) {
+  
+cols_to_plot <- c("Intercept", sig_effect_names, "Sigma2_W", "Sigma2_S")
+cols_to_plot <- intersect(cols_to_plot, colnames(S_Model))
+
+# Always include Sigma2_W in W_Model if it exists
+w_cols <- unique(c(intersect(cols_to_plot, colnames(W_Model)), "Sigma2_W"))
+w_cols <- w_cols[w_cols %in% colnames(W_Model)]
+
+S_Model_sig <- S_Model[, cols_to_plot, drop = FALSE]
+W_Model_sig <- W_Model[, w_cols, drop = FALSE]
+SW_Model_sig <- SW_Model[, intersect(cols_to_plot, colnames(SW_Model)), drop = FALSE]
+
+  # cols_to_plot <- c("Intercept", sig_effect_names, "Sigma2_W", "Sigma2_S")
+  # cols_to_plot <- intersect(cols_to_plot, colnames(S_Model))
+  # S_Model_sig <- S_Model[, cols_to_plot, drop = FALSE]
+  # W_Model_sig <- W_Model[, intersect(cols_to_plot, colnames(W_Model)), drop = FALSE]
+  # SW_Model_sig <- SW_Model[, intersect(cols_to_plot, colnames(SW_Model)), drop = FALSE]
+  
+  
+  histogram <- plot_overlaid_histograms(S_Model_sig, W_Model_sig, SW_Model_sig, bins = 20)
+} else {
+  histogram <- plot_overlaid_histograms(S_Model, W_Model, SW_Model, bins = 20)
+}
+
+summary_stats <- summary_table(S_Model, W_Model, SW_Model)
+
+
+```
+
