@@ -179,7 +179,7 @@ for (i in 1:nsim) {
   SW1_bar[[i]] <- aggregate(Y_SW1 ~ WP, data = df_SW1, FUN = mean)
   
   # Extract df_SW2 for storage
-  df_SW2 <- data.frame(Y_SW2 = model_SW2@frame$Y_SW2, WP = model_SW2@frame$WP)
+ df_SW2 <- data.frame(Y_SW2 = Y_S - Y_W, X_S)
  
    # Calculate and store means of SW2 by WP for this run
   SW2_bar[[i]] <- aggregate(Y_SW2 ~ WP, data = df_SW2, FUN = mean)
