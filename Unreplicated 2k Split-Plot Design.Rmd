@@ -1,0 +1,74 @@
+---
+title: "Unreplicated 2k Split-Plot Design"
+output: word_document
+date: "2025-03-10"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r Unreplicated 2k Split Plot Design Model 1}
+
+library(daewr)
+
+sol <- lm(y ~ A*B*C*D*E, data = plasma)
+effects <- coef(sol)
+effects <- effects[c(2:32)]
+Wpeffects <- effects[c(1:4, 6:11, 16:19, 26)]
+Speffects <- effects[c(5,12:15,20:25,27:31)]
+summary(sol)
+
+```
+
+```{r Unreplicated 2k Split Plot Design Model 2}
+
+# Load the necessary libraries
+library(daewr)
+library(lme4)
+
+# Assuming your dataset is named 'plasma' and has columns A, B, C, D, E, and y
+# Create a unique identifier for each run
+plasma$Run <- as.factor (rep(1:16, each = 2))  # 16 reactor runs, each with 2 samples
+
+# Fit the linear mixed-effects model
+rmod <- lmer(y~(A+B+C+D+E)^2+ (1 | Run), data = plasma)
+
+# Display the summary of the model
+summary(rmod)
+
+# Perform ANOVA on the model
+anova(rmod)
+
+# Extract the fixed effects
+fixed_effects <- fixef(rmod)
+
+# Categorize the fixed effects into Wpeffects and Speffects
+effects <- fixed_effects[-1]  # Exclude the intercept
+Wpeffects <- effects[c(1:4, 6:11, 16:19, 26)]
+Speffects <- effects[c(5, 12:15, 20:25, 27:31)]
+
+# Print the categorized effects
+print(Wpeffects)
+print(Speffects)
+
+```
+
+```{r USausage}
+
+library(daewr)
+library(lme4)
+
+# fo <- "ys ~ A + B + A:B +(1|Block) + (1|A:B:Block)+
+# + C + D + C:D + A:C + A:D + B:C + B:D + A:B:C + A:B:D +
+# + A:C:D + B:C:D + A:B:C:D"
+
+rmod2 <- lmer(ys ~ A + B + A:B +(1|Block) + (1|A:B:Block)+
++ C + D + C:D + A:C + A:D + B:C + B:D + A:B:C + A:B:D +
++ A:C:D + B:C:D + A:B:C:D , data = sausage)
+
+summary(rmod2)
+anova(rmod2)
+
+```
