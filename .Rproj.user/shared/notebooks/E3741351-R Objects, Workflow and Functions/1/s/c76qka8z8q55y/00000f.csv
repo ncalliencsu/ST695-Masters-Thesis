@@ -1,0 +1,8 @@
+"0",""
+"0","set.seed(42)"
+"0","my_unif <- runif(30)"
+"0","is.vector(my_unif)"
+"1","[1]"
+"1"," TRUE"
+"1","
+"
