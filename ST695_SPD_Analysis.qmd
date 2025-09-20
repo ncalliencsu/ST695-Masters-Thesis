@@ -1,0 +1,76 @@
+---
+title: "ST695_SPD_Analysis"
+format: html
+editor: visual
+date: 09/20/2025
+---
+
+**Instantiate Libraries**
+```{r}
+library(lme4) #Needed for lmer Analysis
+library(FrF2) #Needed for Lenth Plots
+```
+
+
+**Import Yarn Data**
+```{r}
+Ys_data <- read.csv("Data/YsData.csv") 
+Ys_data <- Ys_data[,7:13]
+write.csv(Ys_data, file = "Data/Ys_Data_Subset.csv")
+```
+
+**Method 1 OLS**
+```{r S Model by OLS}
+
+WP_factors <- colnames(Ys_data[1:3])
+SP_factors <- colnames(Ys_data[4:5])
+linear_terms <- c(WP_factors, SP_factors)
+
+fo <- as.formula(
+  paste("Denier ~ (", paste(linear_terms, collapse = " + "), ")^2")
+)
+
+Method_1 <- summary(lm(fo, data = Ys_data))
+Method_1
+
+```
+
+Residual Standard Error: 49.74. Error variance estimate: 49.74^2 = 2474.8
+
+The error variance (mean squared error, MSE) is 2474.8 in your model. This value is the estimate of the residual variance from your standard linear model.
+
+
+**Method 2 REML**
+```{r S Model by REML}
+WP_factors <- colnames(Ys_data[1:3])
+SP_factors <- colnames(Ys_data[4:5])
+linear_terms <- c(WP_factors, SP_factors)
+
+fo <- as.formula(
+  paste("Denier ~ (", paste(linear_terms, collapse = " + "), ")^2 + (1|WP)"))
+
+Method_2 <- summary(lmer(fo, data = Ys_data))
+Method_2
+
+```
+
+**Method 4 ANOVA**
+```{r S Model by ANOVA}
+
+```
+
+**Method 5 SP Replicates**
+```{r}
+
+```
+
+**Method 7 Lenth**
+```{r S Model by Lenth}
+
+```
+
+**Method 8 SSP Method**
+```{r W Model by Method 1}
+
+```
+
