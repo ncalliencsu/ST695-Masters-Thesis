@@ -1,0 +1,353 @@
+---
+title: "ST_695_Standalone_Simulation_RMarkdown"
+output: word_document
+date: "2025-07-27"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r }
+
+# Standalone R script for split-plot simulation and diagnostics
+# This script allows interactive inspection of model objects and F-test results
+
+# Load required libraries
+library(lmerTest)
+library(ggplot2)
+library(dplyr)
+
+# ---- User parameters ----
+HTC <- 2
+ETC <- 2
+r <- 2
+nsim <- 1000 # Set to a small number for demonstration
+Intercept <- 10
+w_names <- paste0("w", 1:HTC)
+s_names <- paste0("s", 1:ETC)
+interaction_names <- c(
+  if (length(w_names) > 1) combn(w_names, 2, FUN = function(x) paste(x, collapse = ":")),
+  if (length(s_names) > 1) combn(s_names, 2, FUN = function(x) paste(x, collapse = ":")),
+  as.vector(outer(w_names, s_names, paste, sep = ":"))
+)
+Sigma2_W <- 1
+Sigma2_S <- 5
+
+
+# Effect values (customize as needed)
+effect_input_map <- list(Intercept = 10)
+effect_input_map[["w1"]] <- -2
+effect_input_map[["s1"]] <- 2
+effect_input_map[["s1:s2"]] <- 1
+effect_input_map[["w1:s1"]] <- -1
+# Assign 0 to all other effects
+for (n in w_names) if (is.null(effect_input_map[[n]])) effect_input_map[[n]] <- 0
+for (m in s_names) if (is.null(effect_input_map[[m]])) effect_input_map[[m]] <- 0
+for (nm in interaction_names) if (is.null(effect_input_map[[nm]])) effect_input_map[[nm]] <- 0
+
+# Set sigma2_W and sigma2_S
+Sigma2_W <- 1
+Sigma2_S <- 5
+
+# Create all combinations of w and s factors
+combined_list <- c(
+  setNames(replicate(ETC, c(-1, 1), simplify = FALSE), s_names),
+  setNames(replicate(HTC, c(-1, 1), simplify = FALSE), w_names)
+)
+df_S <- expand.grid(combined_list)
+df_rep_S <- df_S[rep(seq_len(nrow(df_S)), r), ]
+row.names(df_rep_S) <- NULL
+linear_terms_ws <- c(w_names, s_names)
+formula_S <- as.formula(paste("~ (", paste(linear_terms_ws, collapse = " + "), ")^2"))
+X_S <- model.matrix(formula_S, data = df_rep_S)
+colnames(X_S)[1] <- '0'
+wpf_terms <- setNames(replicate(HTC, c(-1,1), simplify = FALSE), w_names)
+df_W <- expand.grid(wpf_terms)
+df_rep_W <- df_W[rep(seq_len(nrow(df_W)), r), ]
+row.names(df_rep_W) <- NULL
+X_W <- X_S[, !grepl("s", colnames(X_S), ignore.case = TRUE)]
+X_SW <- X_S[, grep('s|0', colnames(X_S), value = TRUE)]
+colnames(X_SW) <- gsub(":", "_", colnames(X_SW))
+set.seed(1)
+WP <- as.factor(rep(seq(1, r*2^HTC), each = 2^ETC))
+effect_names <- colnames(X_S)
+
+# This code creates a vector of effect values (effects) that matches the order of the model matrix columns (effect_names). For each effect name:
+#It checks if the effect value is present in effect_input_map (using the original name or a cleaned version with : replaced by _). If found, it uses that value. If the effect name is "0", it uses the intercept value. If not found, it defaults to 0.
+
+effects <- sapply(effect_names, function(nm) {
+  nm_clean <- gsub(":", "_", nm)
+  if (!is.null(effect_input_map[[nm]])) {
+    effect_input_map[[nm]]
+  } else if (!is.null(effect_input_map[[nm_clean]])) {
+    effect_input_map[[nm_clean]]
+  } else if (nm == "0") {
+    effect_input_map[["Intercept"]]
+  } else {
+    0
+  }
+})
+
+
+beta_S <- setNames(effects, effect_names)
+names(beta_S)[1] <- "beta*0"
+beta_W <- beta_S[!grepl("s", colnames(X_S), ignore.case = TRUE)]
+mu_S <- X_S %*% beta_S
+mu_W <- X_W %*% beta_W
+
+# --- Simulation functions ---
+sim_model_S <- function(X_S, mu_S, mu_W, Sigma2_S, Sigma2_W, WP) {
+  n_groups <- length(unique(WP))
+  epsilon_W <- rnorm(n_groups, mean = 0, sd = sqrt(Sigma2_W))
+  epsilon_W <- rep(epsilon_W, times = table(WP))
+  epsilon_S <- rnorm(nrow(X_S), mean = 0, sd = sqrt(Sigma2_S))
+  Y_S <- mu_S + epsilon_W + epsilon_S
+  Y_W <- mu_W + epsilon_W
+  df_S <- data.frame(epsilon_W, df_rep_S, Y_S)
+  formula_S <- as.formula(paste("Y_S ~ (", paste(linear_terms_ws, collapse = " + "), ")^2 + (1|WP)"))
+  rmodel_S <- lmer(formula_S, data = df_S)
+  rmodel_S_summary <- summary(rmodel_S)
+  return(list(Y_W = Y_W, Y_S = Y_S, model_S = rmodel_S))
+}
+sim_model_W <- function(Y_W) {
+  Y_W_unique <- unique(Y_W)
+  df_W <- data.frame(df_rep_W, Y_W = Y_W_unique)
+  formula_W <- as.formula(paste("Y_W ~ (", paste(w_names, collapse = " + "), ")^2"))
+  rmodel_W <- summary(lm(formula_W, data = df_W))
+  return(rmodel_W)
+}
+sim_model_SW <- function(X_SW, Y_S, Y_W, X_S) {
+  X_SW <- X_SW[,-1]
+  df_SW1 <- data.frame(Y_SW1 = Y_S - Y_W, X_SW)
+  X_S <- X_S[,-1]
+  df_SW2 <- data.frame(Y_SW2 = Y_S - Y_W, X_S)
+  formula_SW1 <- as.formula(paste("Y_SW1 ~", paste(colnames(X_SW), collapse = " + ")))
+  rmodel_SW1 <- lm(formula_SW1, data = df_SW1)
+  formula_SW2 <- as.formula(paste("Y_SW2 ~ (", paste(colnames(X_S), collapse = " + "), ") + (1|WP)"))
+  rmodel_SW2 <- lmer(formula_SW2, data = df_SW2)
+  return(list(model_SW1 = rmodel_SW1, model_SW2 = rmodel_SW2))
+}
+perform_F_test <- function(model_SW1, model_SW2) {
+  tryCatch({
+    SSE_SW1 <- sum(residuals(model_SW1)^2)
+    SSE_SW2 <- sum(residuals(model_SW2)^2)
+    dfE_SW1 <- model_SW1$df.residual
+    
+    dfE_SW2 <- nrow(model.frame(model_SW2)) - length(fixef(model_SW2))
+    #nrow(model.frame(model_SW2)) gives the total number of observations used in the model.
+    #length(fixef(model_SW2)) gives the number of fixed effect parameters estimated in the model.
+    
+    f_statistic <- ((SSE_SW1 - SSE_SW2) / (dfE_SW1 - dfE_SW2)) / (SSE_SW2 / dfE_SW2)
+    Fcrit <- qf(0.95, dfE_SW1 - dfE_SW2, dfE_SW2)
+    Significant <- f_statistic > Fcrit
+    data.frame(F_statistic = f_statistic, Fcrit = Fcrit, Significant = Significant)
+  }, error = function(e) {
+    data.frame(F_statistic = NA, Fcrit = NA, Significant = NA)
+  })
+}
+
+# Collect F-Statistic values and F-test components
+F_Stats <- numeric(nsim)
+F_components <- data.frame(SSE_SW1 = numeric(nsim), SSE_SW2 = numeric(nsim), dfE_SW1 = numeric(nsim), dfE_SW2 = numeric(nsim), Numerator = numeric(nsim), Denominator = numeric(nsim), F_statistic = numeric(nsim))
+
+# Store Y_SW1, Y_SW2, WP for all simulation runs
+Y_SW1_list <- vector("list", nsim)
+Y_SW2_list <- vector("list", nsim)
+WP_list <- vector("list", nsim)
+SW1_bar <- vector("list", nsim)
+SW2_bar <- vector("list", nsim)
+
+#Simulation Loop
+for (i in 1:nsim) {
+  cat("\n--- Simulation Run", i, "---\n")
+  sim_S_out <- sim_model_S(X_S, mu_S, mu_W, Sigma2_S, Sigma2_W, WP)
+  Y_W <- sim_S_out$Y_W
+  Y_S <- sim_S_out$Y_S
+  model_S <- sim_S_out$model_S
+  model_W <- sim_model_W(Y_W)
+  sim_SW_out <- sim_model_SW(X_SW, Y_S, Y_W, X_S)
+  model_SW1 <- sim_SW_out$model_SW1
+  model_SW2 <- sim_SW_out$model_SW2
+  
+  # Extract df_SW1 for storage
+  df_SW1 <- data.frame(Y_SW1 = Y_S - Y_W, X_SW)
+  
+  # Calculate and store means of SW1 by WP for this run
+  SW1_bar[[i]] <- aggregate(Y_SW1 ~ WP, data = df_SW1, FUN = mean)
+  
+  # Extract df_SW2 for storage
+ df_SW2 <- data.frame(Y_SW2 = Y_S - Y_W, X_S)
+ 
+   # Calculate and store means of SW2 by WP for this run
+  SW2_bar[[i]] <- aggregate(Y_SW2 ~ WP, data = df_SW2, FUN = mean)
+  
+  #Perform F-Test
+  F_Test <- perform_F_test(model_SW1, model_SW2)
+  print(model_SW1)
+  print(model_SW2)
+  print(F_Test)
+  F_Stats[i] <- F_Test$F_statistic
+  
+  # Store F-test components
+  SSE_SW1 <- sum(residuals(model_SW1)^2)
+  SSE_SW2 <- sum(residuals(model_SW2)^2)
+  dfE_SW1 <- model_SW1$df.residual
+  dfE_SW2 <- nrow(model.frame(model_SW2)) - length(fixef(model_SW2))
+  Numerator <- (SSE_SW1 - SSE_SW2) / (dfE_SW1 - dfE_SW2)
+  Denominator <- SSE_SW2 / dfE_SW2
+  F_statistic <- Numerator / Denominator
+  F_components[i,] <- c(SSE_SW1, SSE_SW2, dfE_SW1, dfE_SW2, Numerator, Denominator, F_statistic)
+  
+  # Store Y_SW1, Y_SW2, WP for this run
+  Y_SW1_list[[i]] <- df_SW1
+  Y_SW2_list[[i]] <- data.frame(Y_SW2 = model_SW2@frame$Y_SW2, WP = model_SW2@frame$WP)
+  WP_list[[i]] <- model_SW2@frame$WP
+}
+
+```
+# Plot histogram of F-Statistic values
+
+## Histogram of F-Statistic
+
+```{r fstat-histogram, fig.width=6, fig.height=4}
+bin_min <- floor(min(F_Stats, na.rm = TRUE))
+bin_max <- ceiling(max(F_Stats, na.rm = TRUE))
+hist(F_Stats, breaks = seq(bin_min, bin_max, by = 1), main = "Histogram of F-Statistic", xlab = "F-Statistic", col = "skyblue", border = "white")
+Fcrit_val <- F_Test$Fcrit
+abline(v = Fcrit_val, col = "red", lwd = 2, lty = 2)
+legend("topright", legend = paste0("Fcrit = ", round(Fcrit_val, 2)), col = "red", lwd = 2, lty = 2, bty = "n")
+```
+
+## Histogram of Significant F-Statistics
+
+```{r fstat-significant-histogram, fig.width=6, fig.height=4}
+Fcrit_val <- F_Test$Fcrit
+F_Stats_sig <- F_Stats[F_Stats > Fcrit_val]
+bin_min_sig <- floor(min(F_Stats_sig, na.rm = TRUE))
+bin_max_sig <- ceiling(max(F_Stats_sig, na.rm = TRUE))
+hist(F_Stats_sig, breaks = seq(bin_min_sig, bin_max_sig, by = 1), main = "Histogram of Significant F-Statistics", xlab = "F-Statistic (Significant)", col = "tomato", border = "white")
+abline(v = Fcrit_val, col = "red", lwd = 2, lty = 2)
+legend("topright", legend = paste0("Fcrit = ", round(Fcrit_val, 2)), col = "red", lwd = 2, lty = 2, bty = "n")
+```
+
+## Components of Variation for Significant F-Statistics
+
+```{r fstat-components-significant, echo=TRUE}
+# Filter for significant F-Statistics
+Fcrit_val <- F_Test$Fcrit
+F_components_sig <- F_components[F_components$F_statistic > Fcrit_val,]
+# Show summary statistics for each component
+summary(F_components_sig)
+## Mean Squared Error (MSE) for SW1 and SW2 (last simulation run)
+MSE_SW1 <- mean(residuals(model_SW1)^2)
+MSE_SW2 <- mean(residuals(model_SW2)^2)
+cat("\n")
+cat("MSE for SW1:", round(MSE_SW1, 4), "\n")
+cat("MSE for SW2:", round(MSE_SW2, 4), "\n")
+cat("SSE for SW1:", sum(residuals(model_SW1)^2), "dfE_SW1:", model_SW1$df.residual, "\n")
+cat("SSE for SW2:", sum(residuals(model_SW2)^2), "dfE_SW2:", nrow(model.frame(model_SW2)) - length(fixef(model_SW2)), "\n")
+```
+
+## Histograms of Components of Variation for Significant F-Statistics
+
+```{r fstat-components-histograms, fig.width=6, fig.height=4}
+par(mfrow = c(2,2)) # 2x2 grid for 4 histograms
+hist(F_components_sig$SSE_SW1, main = "SSE_SW1 (Significant)", xlab = "SSE_SW1", col = "lightblue", border = "white")
+hist(F_components_sig$SSE_SW2, main = "SSE_SW2 (Significant)", xlab = "SSE_SW2", col = "lightgreen", border = "white")
+hist(F_components_sig$Numerator, main = "Numerator (Significant)", xlab = "Numerator", col = "orange", border = "white")
+hist(F_components_sig$Denominator, main = "Denominator (Significant)", xlab = "Denominator", col = "violet", border = "white")
+par(mfrow = c(1,1)) # reset layout
+```
+
+## Variance Components of F-Statistic (Linear Model Approach)
+
+```{r fstat-variance-components, echo=TRUE}
+# Fit linear model to decompose variance
+lm_fstat <- lm(F_statistic ~ SSE_SW1 + SSE_SW2 + dfE_SW1 + dfE_SW2, data = F_components)
+# Get ANOVA table
+anova_fstat <- anova(lm_fstat)
+# Calculate % contribution for each component
+ss_total <- sum(anova_fstat$'Sum Sq')
+percent_contrib <- 100 * anova_fstat$'Sum Sq' / ss_total
+variance_table <- data.frame(Component = rownames(anova_fstat), Percent_Contribution = round(percent_contrib, 2))
+variance_table
+
+```
+
+## Residuals vs. Fits Plots
+
+```{r residuals-vs-fits, fig.width=6, fig.height=4}
+# Example: Use last simulation run's models
+# If you want to inspect other runs, you can modify this section
+fits_SW1 <- fitted(model_SW1)
+resid_SW1 <- residuals(model_SW1)
+fits_SW2 <- fitted(model_SW2)
+resid_SW2 <- residuals(model_SW2)
+
+par(mfrow = c(1,2))
+plot(fits_SW1, resid_SW1, main = "Residuals vs Fits (SW1)", xlab = "Fitted Values", ylab = "Residuals", col = "blue", pch = 19)
+abline(h = 0, lty = 2, col = "gray")
+plot(fits_SW2, resid_SW2, main = "Residuals vs Fits (SW2)", xlab = "Fitted Values", ylab = "Residuals", col = "darkgreen", pch = 19)
+par(mfrow = c(1,1))
+par(mfrow = c(1,1))
+```
+
+
+
+## Normal QQ Plots of Residuals
+
+```{r residuals-qqplot, fig.width=6, fig.height=4}
+par(mfrow = c(1,2))
+qqnorm(residuals(model_SW1), main = "Normal QQ Plot (SW1)", col = "blue", pch = 19)
+qqline(residuals(model_SW1), col = "gray", lwd = 2)
+
+## Variance Inflation Factors (VIF) for Predictors
+qqnorm(residuals(model_SW2), main = "Normal QQ Plot (SW2)", col = "darkgreen", pch = 19)
+qqline(residuals(model_SW2), col = "gray", lwd = 2)
+par(mfrow = c(1,1))
+```
+
+# Boxplot of Residuals by WP Level
+
+```{r residuals-boxplot-wp, fig.width=6, fig.height=4}
+# Boxplot of residuals from model_SW2 by WP level (last simulation run)
+resid_SW2 <- residuals(model_SW2)
+wp_levels_SW2 <- model_SW2@frame$WP
+boxplot(resid_SW2 ~ wp_levels_SW2,
+        main = "Boxplot of Residuals by WP Level (SW2)",
+        xlab = "WP Level",
+        ylab = "Residuals",
+        col = "lightblue",
+        border = "gray")
+```
+
+
+# Line Plot of Aggregated Means of SW1_bar and SW2_bar by WP (ggplot2)
+
+```{r means-lineplot-wp-ggplot, fig.width=7, fig.height=5}
+# Combine all runs into one data frame for SW1 and SW2
+SW1_all <- do.call(rbind, SW1_bar)
+SW2_all <- do.call(rbind, SW2_bar)
+
+# Calculate mean by WP level across all runs
+SW1_all_bar <- aggregate(Y_SW1 ~ WP, data = SW1_all, FUN = mean)
+SW2_all_bar <- aggregate(Y_SW2 ~ WP, data = SW2_all, FUN = mean)
+
+# Merge for plotting
+df_SW_12 <- merge(SW1_all_bar, SW2_all_bar, by = "WP")
+df_SW_12_long <- tidyr::pivot_longer(df_SW_12, cols = c("Y_SW1", "Y_SW2"), names_to = "Response", values_to = "Mean")
+
+# Plot using ggplot2
+ggplot(df_SW_12_long, aes(x = WP, y = Mean, color = Response, group = Response)) +
+  geom_line(size = 1.2) +
+  geom_point(size = 2) +
+  labs(title = "Aggregated Means of SW1 and SW2 by WP (All Simulation Runs)",
+       x = "WP Level", y = "Mean Response") +
+  scale_color_manual(values = c("Y_SW1" = "blue", "Y_SW2" = "darkgreen"), labels = c("SW1", "SW2")) +
+  theme_minimal()
+```
+
+
