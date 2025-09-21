@@ -6,13 +6,13 @@ date: 09/20/2025
 ---
 
 **Instantiate Libraries**
+
 ```{r}
 library(lme4) #Needed for lmer Analysis
-library(FrF2) #Needed for Lenth Plots
 ```
 
-
 **Import Yarn Data**
+
 ```{r}
 Ys_data <- read.csv("Data/YsData.csv") 
 Ys_data <- Ys_data[,7:13]
@@ -20,6 +20,7 @@ write.csv(Ys_data, file = "Data/Ys_Data_Subset.csv")
 ```
 
 **Method 1 OLS**
+
 ```{r S Model by OLS}
 
 WP_factors <- colnames(Ys_data[1:3])
@@ -35,12 +36,12 @@ Method_1
 
 ```
 
-Residual Standard Error: 49.74. Error variance estimate: 49.74^2 = 2474.8
+Residual Standard Error: 49.74. Error variance estimate: 49.74\^2 = 2474.8
 
 The error variance (mean squared error, MSE) is 2474.8 in your model. This value is the estimate of the residual variance from your standard linear model.
 
-
 **Method 2 REML**
+
 ```{r S Model by REML}
 WP_factors <- colnames(Ys_data[1:3])
 SP_factors <- colnames(Ys_data[4:5])
@@ -54,23 +55,254 @@ Method_2
 
 ```
 
-**Method 4 ANOVA**
-```{r S Model by ANOVA}
-
-```
-
-**Method 5 SP Replicates**
+**Method 3 Reweighted GLS Estimation**
 ```{r}
 
 ```
 
-**Method 7 Lenth**
-```{r S Model by Lenth}
+
+**Method 4 ANOVA**
+
+```{r S Model by ANOVA}
+WP_factors <- colnames(Ys_data[1:3])
+SP_factors <- colnames(Ys_data[4:5])
+linear_terms <- c(WP_factors, SP_factors)
+
+fo <- as.formula(
+  paste("Denier ~ (", paste(linear_terms, collapse = " + "), ")^2 + Error(WP)"))
+
+Method_4 <- summary(aov(fo, data = Ys_data))
+Method_4
+```
+
+**Method 5A SP Replicates**
+
+```{r}
+# Function to simulate whole-plot and sub-plot replicates
+WP_SP_replicates <- function(data, response = "Denier", r = 3, sd = 5, seed = 123) {
+  set.seed(seed)
+  # Repeat each row r times
+  data_rep <- data[rep(1:nrow(data), each = r), ]
+  # Add replicate identifier
+  data_rep$RPL <- rep(1:r, times = nrow(data))
+  # Add random noise to the response variable
+  data_rep[[response]] <- data_rep[[response]] + rnorm(nrow(data_rep), mean = 0, sd = sd)
+  rownames(data_rep) <- NULL
+  return(data_rep)
+}
+
+# Function to calculate sub-plot variance (σ²_sp)
+calculate_subplot_variance <- function(data, response, wp_col, sp_col) {
+  # Split data by whole-plot column
+  wp_groups <- split(data, data[[wp_col]])
+  
+  # Calculate variance within each whole-plot group
+  sp_variances <- sapply(wp_groups, function(group) {
+    sum((group[[response]] - mean(group[[response]]))^2) / (nrow(group) - 1)
+  })
+  
+  # Return the average sub-plot variance
+  sigma2_sp <- mean(sp_variances)
+  return(sigma2_sp)
+}
+
+# Function to calculate total variance (σ²_tot)
+calculate_total_variance <- function(data, response, replicate_col) {
+  # Split data by replicate column
+  replicate_groups <- split(data, data[[replicate_col]])
+  
+  # Calculate mean for each replicate group
+  replicate_means <- sapply(replicate_groups, function(group) mean(group[[response]]))
+  
+  # Calculate variance of replicate means
+  sigma2_tot <- var(replicate_means)
+  return(sigma2_tot)
+}
+
+# Function to calculate whole-plot variance (σ²_wp)
+calculate_wholeplot_variance <- function(sigma2_tot, sigma2_sp) {
+  sigma2_wp <- sigma2_tot - sigma2_sp
+  return(sigma2_wp)
+}
+
+# Main analysis function for Method 5A
+method5A_analysis <- function(data, response = "Denier", wp_col = "WP", sp_col = "RPL", replicate_col = "RPL") {
+  # Calculate sub-plot variance
+  sigma2_sp <- calculate_subplot_variance(data, response, wp_col, sp_col)
+  
+  # Calculate total variance
+  sigma2_tot <- calculate_total_variance(data, response, replicate_col)
+  
+  # Calculate whole-plot variance
+  sigma2_wp <- calculate_wholeplot_variance(sigma2_tot, sigma2_sp)
+  
+  # Return results
+  return(list(
+    sigma2_sp = sigma2_sp,
+    sigma2_tot = sigma2_tot,
+    sigma2_wp = sigma2_wp
+  ))
+}
+
+# Example usage
+
+
+# Simulate replicates
+replicated_data <- WP_SP_replicates(data = Ys_data, response = "Denier", r = 3, sd = 5, seed = 123)
+
+# Perform Method 5A analysis
+results <- method5A_analysis(replicated_data, response = "Denier", wp_col = "WP", sp_col = "RPL", replicate_col = "RPL")
+
+# Print results
+print(results)
+
+
+```
+
+
+**Method 5B SP Replicates**
+```{r}
+# Function to simulate hierarchical replicates for Method 5B
+simulate_hierarchical_data <- function(data, response = "Denier", wp_col = "WP", 
+                                       num_wp_replicates = 3, num_sp_replicates = 2, 
+                                       sd_wp = 10, sd_sp = 5, seed = 123) {
+  set.seed(seed)
+  
+  # Create whole-plot replicates
+  wp_replicates <- data[rep(1:nrow(data), each = num_wp_replicates), ]
+  wp_replicates$WP_Rep <- rep(1:num_wp_replicates, times = nrow(data))
+  
+  # Add random noise for whole-plot variability
+  wp_replicates[[response]] <- wp_replicates[[response]] + 
+    rnorm(nrow(wp_replicates), mean = 0, sd = sd_wp)
+  
+  # Create sub-plot replicates within each whole-plot replicate
+  sp_replicates <- wp_replicates[rep(1:nrow(wp_replicates), each = num_sp_replicates), ]
+  sp_replicates$SP_Rep <- rep(1:num_sp_replicates, times = nrow(wp_replicates))
+  
+  # Add random noise for sub-plot variability
+  sp_replicates[[response]] <- sp_replicates[[response]] + 
+    rnorm(nrow(sp_replicates), mean = 0, sd = sd_sp)
+  
+  # Reset row names and return the simulated dataset
+  rownames(sp_replicates) <- NULL
+  return(sp_replicates)
+}
+
+# Example usage
+
+# Simulate hierarchical data
+simulated_data <- simulate_hierarchical_data(
+  data = Ys_data, 
+  response = "Denier", 
+  wp_col = "WP", 
+  num_wp_replicates = 3,  # Number of whole-plot replicates
+  num_sp_replicates = 2,  # Number of sub-plot replicates
+  sd_wp = 10,             # Standard deviation for whole-plot noise
+  sd_sp = 5,              # Standard deviation for sub-plot noise
+  seed = 123              # Random seed for reproducibility
+)
+
+# View the first few rows of the simulated dataset
+head(simulated_data)
+
+
+# Function to perform Method 5B analysis
+method5B_analysis <- function(data, response = "Denier", wp_col = "WP", wp_rep_col = "WP_Rep", sp_rep_col = "SP_Rep") {
+  # Step 1: Calculate the total mean
+  grand_mean <- mean(data[[response]])
+  
+  # Step 2: Calculate the whole-plot mean squares (MS_wp)
+  wp_means <- aggregate(data[[response]], by = list(data[[wp_col]], data[[wp_rep_col]]), FUN = mean)
+  colnames(wp_means) <- c(wp_col, wp_rep_col, "WP_Mean")
+  wp_ms <- sum((wp_means$WP_Mean - grand_mean)^2) / (nrow(wp_means) - 1)
+  
+  # Step 3: Calculate the sub-plot mean squares (MS_sp)
+  sp_means <- aggregate(data[[response]], by = list(data[[sp_rep_col]]), FUN = mean)
+  colnames(sp_means) <- c(sp_rep_col, "SP_Mean")
+  sp_ms <- sum((sp_means$SP_Mean - grand_mean)^2) / (nrow(sp_means) - 1)
+  
+  # Step 4: Calculate the residual mean squares (MS_res)
+  residuals <- data[[response]] - ave(data[[response]], data[[wp_col]], data[[wp_rep_col]], data[[sp_rep_col]], FUN = mean)
+  ms_res <- sum(residuals^2) / (nrow(data) - nrow(wp_means) - nrow(sp_means) + 1)
+  
+  # Step 5: Estimate variances
+  sigma2_wp <- (wp_ms - sp_ms) / (length(unique(data[[wp_rep_col]])) * length(unique(data[[sp_rep_col]])))
+  sigma2_sp <- (sp_ms - ms_res) / length(unique(data[[sp_rep_col]]))
+  sigma2_res <- ms_res
+  
+  # Return results
+  return(list(
+    sigma2_wp = sigma2_wp,
+    sigma2_sp = sigma2_sp,
+    sigma2_res = sigma2_res
+  ))
+}
+
+# Example usage
+
+# Perform Method 5B analysis
+results <- method5B_analysis(simulated_data, response = "Denier", wp_col = "WP", wp_rep_col = "WP_Rep", sp_rep_col = "SP_Rep")
+
+# Print results
+print(results)
+
+```
+
+
+**Method 6 QQ Plot Method**
+```{r}
+
+WP_factors <- colnames(Ys_data[1:3])
+SP_factors <- colnames(Ys_data[4:5])
+linear_terms <- c(WP_factors, SP_factors)
+
+# Create formula with 2-way interactions for WP factors
+formula_wp <- as.formula(paste("Denier ~ (", paste(WP_factors, collapse = " + "), ")^2"))
+                         
+model_wp <- lm(formula_wp, data = Ys_data)
+effects_wp <- coef(model_wp)[-1]
+effect_names_wp <- names(coef(model_wp))[-1]
+
+halfnormal(effects_wp, main = "Half-Normal Plot: WP Factors + 2-way Interactions", labs = effect_names_wp)
+
+
+# Create formula with 2-way interaction for SP factors
+formula_sp <- as.formula(paste("Denier ~ (", paste(SP_factors, collapse = " + "), ")^2"))
+model_sp <- lm(formula_sp, data = Ys_data)
+effects_sp <- coef(model_sp)[-1]
+effect_names_sp <- names(coef(model_sp))[-1]
+
+halfnormal(effects_sp, main = "Half-Normal Plot: SP Factors + 2-way Interaction", labs = effect_names_sp)
+
+
+```
+
+
+**Method 7 Lenth's Method**
+
+```{r S Model by Lenth's Method}
+
+library(FrF2)
+# Assuming your data is in a data frame called Ys_data
+LenthPlot(Ys_data$Denier ~ T + P + S + D + R, data = Ys_data)
+
+
 
 ```
 
 **Method 8 SSP Method**
-```{r W Model by Method 1}
+
+```{r W Model by Method 8}
+
+WP_factors <- colnames(Ys_data[1:3])
+
+
+fo <- as.formula(
+  paste("Denier ~ (", paste(WP_factors, collapse = " + "), ")^2"))
+
+Method_8 <- summary(lm(fo, data = Ys_data))
+
+Method_8
 
 ```
-

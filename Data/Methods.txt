@@ -1,0 +1,106 @@
+
+
+Method 5
+The next method to be discussed is based on using additional replicated measurements. If additional
+replications are collected in a sensible way, the variances of the whole-plot and the sub-plot errors can be
+estimated using simple variance formulae. Such an approach was described in, for instance, Kowalski et al.5.
+One of the advantages of this approach is that the estimated error variances are totally model-independent.
+The disadvantage is that more experiments have to be carried out.
+Sub-plot replicates can often be obtained easily by just replicating some of the sub-plot combinations for
+a given whole-plot configuration. If variances are different for the different whole-plot combinations, it is
+recommended that this procedure is repeated for a number of whole-plot combinations.With r different wholeplot
+combinations and with m different sub-plot combinations within each of them, the sub-plot error variance
+estimate can be written as
+S2
+sp
+= 1
+r
+
+r
+i=1
+
+m
+j=1(yij − ¯yi.)2
+m − 1
+(8)
+Here, yij is the response measurement for whole-plot combination i and sub-plot combination j and ¯yi. is the
+average of yij over j . For whole-plot variance estimation, however, the situation is different. Making replicates
+involving only the whole-plot error is difficult to envision because all replicates will always involve a
+contribution from the residual random (here sub-plot) error. At least measurement error will always be present,
+even if sub-plot combinations can be kept in exactly the same position during the experimentation.
+A possible approach for estimating the whole-plot variance estimation is the following. Select one
+combination of the experimental variables and repeat it r times, each time by resetting both the whole-plot and
+sub-plot factors between each experiment. These replicates will then be identical except for the total random
+noise in the experiment, which is equal to δ + e and has variance equal to σ2
+tot
+= σ2
+wp
++ σ2
+sp. The total error
+variance can be estimated using the simple formula
+ˆσ
+2
+tot
+=
+r
+i=1
+(yi − ¯y)2/(r − 1) (9)
+This can, as for the sub-plot variance, be repeated for a number of experimental settings and pooled to give a
+more precise estimate. The whole-plot error variance can then be computed by subtracting the sub-plot variance
+ˆσ
+2
+sp from ˆσ 2
+tot giving
+ˆσ
+2
+wp
+= ˆσ2
+tot
+− ˆσ2
+sp (10)
+A problem with this approach, however, is that it is not obvious how to find the distribution of the error variances
+in V and their DFs, which are needed for testing purposes. For the situation with many replicates, this is not a
+major problem. The reason is that the estimated elements of V can then be assumed known.
+Another approach, which can be used to provide both whole-plot and sub-plot variances simultaneously, is
+to use a hierarchical design strategy. First, a whole-plot combination is selected and then this combination is
+reset a number of times (r). For each of these ‘resets’, the same sub-plot combination is repeated a number of
+times (m). The data will then contain information only about the noise structure and can be modelled as
+yij = μ + Ai + eij (11)
+
+where Ai corresponds to the whole-plot random error and eij to the sub-plot error. The expected whole-plot
+MS for this model is equal to the same expression as in Equation (6). The variances of the two errors can be
+estimated using the standard ANOVA formulae.
+ˆσ
+2
+sp
+= MSsp = 1
+m(r − 1)
+r
+i=1
+m
+j=1
+(yij − ¯yi)2 (12)
+and
+ˆσ
+2
+wp
+= (MSwp − MSsp)/m = 1
+m
+
+m
+r
+i=1
+(¯yi − ¯y)2/(r − 1)
+
+− ˆσ2
+sp
+
+(13)
+where MSwp and MSsp are the mean squares for the two effects in model (11). The two MSs have DFs equal to
+(r − 1) and m(r − 1), respectively.
+An advantage with this hierarchical approach is that the number of sub-plot replicates m can in some cases
+be chosen in such a way that the expectations of the MSs are exactly equal to the variance elements of
+cov( ˆbGLS) = (XTV−1X)
+−1. This means that estimates for the error variances used in the tests will have known
+distribution and can be used directly for testing purposes.We will comment further on this topic in Section 7 in
+the first of the examples.
