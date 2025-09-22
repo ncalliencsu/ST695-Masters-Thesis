@@ -14,8 +14,10 @@ library(lme4) #Needed for lmer Analysis
 **Import Yarn Data**
 
 ```{r}
-Ys_data <- read.csv("Data/YsData.csv") 
+Ys_data <- read.csv("Data/YsData.csv")
+Yw_data <- 
 Ys_data <- Ys_data[,7:13]
+Ys_data$WP=as.factor(Ys_data$WP)
 write.csv(Ys_data, file = "Data/Ys_Data_Subset.csv")
 ```
 
@@ -45,6 +47,9 @@ The error variance (mean squared error, MSE) is 2474.8 in your model. This value
 ```{r S Model by REML}
 WP_factors <- colnames(Ys_data[1:3])
 SP_factors <- colnames(Ys_data[4:5])
+
+
+
 linear_terms <- c(WP_factors, SP_factors)
 
 fo <- as.formula(
@@ -252,6 +257,7 @@ print(results)
 
 **Method 6 QQ Plot Method**
 ```{r}
+library(FrF2)
 
 WP_factors <- colnames(Ys_data[1:3])
 SP_factors <- colnames(Ys_data[4:5])
@@ -264,7 +270,8 @@ model_wp <- lm(formula_wp, data = Ys_data)
 effects_wp <- coef(model_wp)[-1]
 effect_names_wp <- names(coef(model_wp))[-1]
 
-halfnormal(effects_wp, main = "Half-Normal Plot: WP Factors + 2-way Interactions", labs = effect_names_wp)
+halfnormal(effects_wp, main = "Half-Normal Plot: WP Factors + 2-way Interactions", 
+           labs = effect_names_wp, alpha = 1)
 
 
 # Create formula with 2-way interaction for SP factors
@@ -273,7 +280,8 @@ model_sp <- lm(formula_sp, data = Ys_data)
 effects_sp <- coef(model_sp)[-1]
 effect_names_sp <- names(coef(model_sp))[-1]
 
-halfnormal(effects_sp, main = "Half-Normal Plot: SP Factors + 2-way Interaction", labs = effect_names_sp)
+halfnormal(effects_sp, main = "Half-Normal Plot: SP Factors + 2-way Interaction", 
+           labs = effect_names_sp, alpha = 1)
 
 
 ```
@@ -283,9 +291,11 @@ halfnormal(effects_sp, main = "Half-Normal Plot: SP Factors + 2-way Interaction"
 
 ```{r S Model by Lenth's Method}
 
-library(FrF2)
-# Assuming your data is in a data frame called Ys_data
-LenthPlot(Ys_data$Denier ~ T + P + S + D + R, data = Ys_data)
+library(BsMD)
+
+model <- lm(Denier ~ (T + P + S)^2 + D + R + D:R, data = Ys_data)
+effects <- coef(model)[-1]  # Remove intercept
+LenthPlot(effects, main = "Lenth Plot: All Effects")
 
 
 
@@ -295,7 +305,7 @@ LenthPlot(Ys_data$Denier ~ T + P + S + D + R, data = Ys_data)
 
 ```{r W Model by Method 8}
 
-WP_factors <- colnames(Ys_data[1:3])
+WP_factors <- colnames(Yw_data[1:3])
 
 
 fo <- as.formula(
