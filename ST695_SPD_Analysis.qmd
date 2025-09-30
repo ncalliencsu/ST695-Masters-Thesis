@@ -1,19 +1,17 @@
 ---
 title: "ST695_SPD_Analysis"
-format: html
+format: latex
 editor: visual
-date: 09/20/2025
+date: 09/29/2025
 ---
 
 **Instantiate Libraries**
-
 ```{r}
 library(lmerTest) #Needed for REML Analysis
 ```
 
 **Import Yarn Data**
-
-```{r}
+```{r Data Import and Preprocessing}
 Ys_data <- read.csv("Data/YsData.csv")
 Ys_data <- Ys_data[,7:13]
 Ys_data$WP=as.factor(Ys_data$WP)
@@ -25,7 +23,6 @@ write.csv(Yw_data, file = "Data/Yw_Data_Subset.csv")
 ```
 
 **Method 1 OLS**
-
 ```{r S Model by OLS}
 
 WP_factors <- colnames(Ys_data[1:3])
@@ -46,7 +43,6 @@ Residual Standard Error: 49.74. Error variance estimate: 49.74\^2 = 2474.8
 The error variance (mean squared error, MSE) is 2474.8 in your model. This value is the estimate of the residual variance from your standard linear model.
 
 **Method 2 REML**
-
 ```{r S Model by REML}
 WP_factors <- colnames(Ys_data[1:3])
 SP_factors <- colnames(Ys_data[4:5])
@@ -60,15 +56,7 @@ Method_2 <- summary(lmer(fo, data = Ys_data))
 Method_2
 
 ```
-
-**Method 3 Reweighted GLS Estimation**
-
-```{r}
-
-```
-
 **Method 4 ANOVA**
-
 ```{r S Model by ANOVA}
 WP_factors <- colnames(Ys_data[1:3])
 SP_factors <- colnames(Ys_data[4:5])
@@ -81,18 +69,8 @@ Method_4_ANOVA <- summary(aov(fo, data = Ys_data))
 Method_4_ANOVA
 ```
 
-**Method 4 ANOVA with F Test and p-values**
-
-```{r S Model by ANOVA by LMER}
-
-
-
-```
-
-
-**Method 5A SP Replicates**
-
-```{r}
+**Method 5A Additional Replicates**
+```{r S Model with Additional Replicates, eval=FALSE}
 # Function to simulate whole-plot and sub-plot replicates
 WP_SP_replicates <- function(data, response = "Denier", r = 3, sd = 5, seed = 123) {
   set.seed(seed)
@@ -174,9 +152,9 @@ print(results)
 
 ```
 
-**Method 5B SP Replicates**
+**Method 5B Hierarchical Design**
+```{r SModel with Hierarchical Design, eval=FALSE}
 
-```{r}
 # Function to simulate hierarchical replicates for Method 5B
 simulate_hierarchical_data <- function(data, response = "Denier", wp_col = "WP", 
                                        num_wp_replicates = 3, num_sp_replicates = 2, 
@@ -265,8 +243,7 @@ print(results)
 ```
 
 **Method 6 QQ Plot Method S Model**
-
-```{r}
+```{r S Model with QQ Plot}
 library(FrF2)
 
 WP_factors <- colnames(Ys_data[1:3])
@@ -311,8 +288,7 @@ halfnormal(effects_SW, main = "Half-Normal Plot: SP Factors + 2-way Interactions
 
 
 **Method 6 QQ Plot Method W Model**
-
-```{r}
+```{r W Model with QQ Plot}
 library(FrF2)
 
 WP_factors <- colnames(Ys_data[1:3])
@@ -331,9 +307,8 @@ halfnormal(effects_wp, main = "Half-Normal Plot: WP Factors + 2 & 3-way Interact
 ```
 
 
-**Method 7 Lenth's Method on**
-
-```{r S Model by Lenth's Method}
+**Method 7 Lenth Method W Model**
+```{r W Model by Lenth Method}
 
 library(BsMD)
 
@@ -348,9 +323,8 @@ LenthPlot(effects, main = "Lenth Plot: All Effects")
 
 ```
 
-**Method 8 SSP Method**
-
-```{r W Model by Method 8}
+**Method 8 Sequential Split Plot Method W Model**
+```{r W Model by SSP Method}
 
 WP_factors <- colnames(Yw_data[1:3])
 
