@@ -15,11 +15,16 @@ library(lmerTest) #Needed for REML Analysis
 Ys_data <- read.csv("Data/YsData.csv")
 Ys_data <- Ys_data[,7:13]
 Ys_data$WP=as.factor(Ys_data$WP)
-write.csv(Ys_data, file = "Data/Ys_Data_Subset.csv")
 
 Yw_data <- read.csv("Data/YwData.csv")
 Yw_data <- Yw_data[,14:17]
-write.csv(Yw_data, file = "Data/Yw_Data_Subset.csv")
+
+cat(" Complete PLA Data Set\n")
+print(Ys_data)
+
+cat(" Whole Plot PLA Data Set\n")
+print(Yw_data)
+
 ```
 
 **Method 1 (Ordinary Least Squares)**
