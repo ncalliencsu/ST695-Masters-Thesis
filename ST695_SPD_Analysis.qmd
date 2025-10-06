@@ -2,95 +2,79 @@
 title: "ST695_SPD_Analysis"
 format: latex
 editor: visual
-date: 09/29/2025
+date: today
 ---
 
 **Instantiate Libraries**
 ```{r}
-library(lmerTest) #Needed for REML Analysis
+library(lmerTest) #For REML Analysis
+library(afex) #For ANOVA Analysis
+library(FrF2) #For QQ Plots
+library(BsMD) #For Lenth Plots
 ```
 
-**Import PLA Data**
-```{r Data Import and Preprocessing}
+**Import SP PLA Data Set **
+```{r Import and Preprocess SP Data}
 Ys_data <- read.csv("Data/YsData.csv")
 Ys_data <- Ys_data[,7:13]
 Ys_data$WP=as.factor(Ys_data$WP)
-
-Yw_data <- read.csv("Data/YwData.csv")
-Yw_data <- Yw_data[,14:17]
-
-cat(" Complete PLA Data Set\n")
+cat("SP PLA Data Set\n")
 print(Ys_data)
-
-cat(" Whole Plot PLA Data Set\n")
-print(Yw_data)
-
 ```
 
 **Method 1 (Ordinary Least Squares)**
 ```{r S Model by OLS}
-
 WP_factors <- colnames(Ys_data[1:3])
 SP_factors <- colnames(Ys_data[4:5])
 linear_terms <- c(WP_factors, SP_factors)
-
 # Model with all main effects and 2-way interactions
-fo <- as.formula(
-  paste(
-    "Denier ~ (", 
-    paste(linear_terms, collapse = " + "), 
-    ")^2"
-  )
-)
-
-Method_1 <- summary(lm(fo, data = Ys_data))
+formula_1 <- as.formula(paste("Y_S ~ (", 
+    paste(linear_terms, collapse = " + "),")^2"))
+Method_1 <- summary(lm(formula_1, data = Ys_data))
 Method_1
-
 ```
 
 Residual Standard Error: 49.74. Error variance estimate: 49.74\^2 = 2474.8
 
 The error variance (mean squared error, MSE) is 2474.8 in your model. This value is the estimate of the residual variance from your standard linear model.
 
-**Method 2 (Restricted Maximum Likelihood)**
-```{r S Model by REML}
-WP_factors <- colnames(Ys_data[1:3])
-SP_factors <- colnames(Ys_data[4:5])
-
-linear_terms <- c(WP_factors, SP_factors)
-
+**Method 2A (Restricted Maximum Likelihood using Satterwaithe)**
+```{r S Model by REML  (Satterwaithe t-tests)}
 # Model with all main effects, 2-way interactions, and random WP effect
-fo <- as.formula(
-  paste(
-    "Denier ~ (", 
-    paste(linear_terms, collapse = " + "), 
-    ")^2 + (1|WP)"
-  )
-)
-
-Method_2 <- summary(lmer(fo, data = Ys_data))
-Method_2
-
+formula_2A <- as.formula(paste("Y_S ~ (", 
+    paste(linear_terms, collapse = " + "),")^2 + (1|WP)"))
+Method_2A <- summary(lmer(formula_2A, data = Ys_data))
+Method_2A
 ```
-**Method 4 ANOVA**
-```{r S Model by ANOVA}
-WP_factors <- colnames(Ys_data[1:3])
-SP_factors <- colnames(Ys_data[4:5])
-linear_terms <- c(WP_factors, SP_factors)
+**Method 2B (Restricted Maximum Likelihood using Kenward Roger)**
+```{r}
+# Model with all main effects, 2-way interactions, and random WP effect
+formula_2B <- as.formula(paste("Y_S ~ (", 
+    paste(linear_terms, collapse = " + "),")^2+ (1|WP)"))
+# Fit model with Kenward-Roger method
+model_2B <- lmer(formula_2B, data = Ys_data, REML = TRUE)
+Method_2B <- summary(model_2B, ddf = "Kenward-Roger")
+Method_2B
+```
 
+**Method 4A ANOVA using Base R**
+```{r S Model by ANOVA}
 # Model with all main effects, 2-way interactions,
 #and split-plot error structure
+formula_4A <- as.formula(paste("Y_S ~ (", 
+    paste(linear_terms, collapse = " + "),")^2 + Error(WP)"))
+Method_4A <- summary(aov(formula_4A, data = Ys_data))
+Method_4A
+```
 
-fo <- as.formula(
-  paste(
-    "Denier ~ (", 
-    paste(linear_terms, collapse = " + "), 
-    ")^2 + Error(WP)"
-  )
-)
-
-Method_4_ANOVA <- summary(aov(fo, data = Ys_data))
-Method_4_ANOVA
+**Method 4B ANOVA using LMER and AFEX**
+```{r S Model by lmer with WP 3-way interaction}
+formula_4B <- as.formula(paste("Y_S ~ (", 
+    paste(linear_terms, collapse = " + "),")^2 + T:S:P + (1|WP)"))
+Method_4B_mixed <- lmer(formula_4B, data = Ys_data)
+Method_4B_mixed
+Method_4B_ANOVA <- anova(Method_4B_mixed, ddf = "Kenward-Roger")
+Method_4B_ANOVA
 ```
 
 **Method 5A Additional Replicates**
@@ -172,13 +156,10 @@ results <- method5A_analysis(replicated_data, response = "Denier", wp_col = "WP"
 
 # Print results
 print(results)
-
-
 ```
 
 **Method 5B Hierarchical Design**
 ```{r SModel with Hierarchical Design, eval=FALSE}
-
 # Function to simulate hierarchical replicates for Method 5B
 simulate_hierarchical_data <- function(data, response = "Denier", wp_col = "WP", 
                                        num_wp_replicates = 3, num_sp_replicates = 2, 
@@ -263,149 +244,174 @@ results <- method5B_analysis(simulated_data, response = "Denier", wp_col = "WP",
 
 # Print results
 print(results)
-
 ```
 
 **Method 6 QQ Plot Method for S Model**
-```{r S Model with QQ Plot}
-library(FrF2)
-
-WP_factors <- colnames(Ys_data[1:3])
-SP_factors <- colnames(Ys_data[4:5])
-linear_terms <- c(WP_factors, SP_factors)
-
-# Model for WP factors (main effects, 2- and 3-way interactions)
-formula_wp <- as.formula(
-  paste(
-    "Denier ~ (", 
-    paste(WP_factors, collapse = " + "), 
-    ")^3"
-  )
+```{r S Model with QQ Plot - 2 Plots}
+# Model with all main effects and 2-way interactions
+formula_6S <- as.formula(paste("Y_S ~ (", 
+    paste(linear_terms, collapse = " + "),")^2"))
+model_6S <- lm(formula_6S, data = Ys_data)  # Use lm()
+effects <- coef(model_6S)[-1]    # Remove intercept
+# Plot 1 - QQ Plot of SP Effects
+SP_effects_names <- c(
+  "D",    # SP main effect
+  "R",    # SP main effect
+  "D:R",  # SP interaction
+  "T:D",  # SP x WP
+  "T:R",  # SP x WP
+  "P:D",  # SP x WP
+  "P:R",  # SP x WP
+  "S:D",  # SP x WP
+  "S:R"   # SP x WP
 )
-                         
-model_wp <- lm(formula_wp, data = Ys_data)
-effects_wp <- coef(model_wp)[-1]
-effect_names_wp <- names(coef(model_wp))[-1]
-
-halfnormal(
-  effects_wp,
-  main = "Half-Normal Plot for S Model:\nWP Factors + 2 & 3-way Interactions",
-  labs = effect_names_wp,
-  alpha = 1
+SP_effects <- effects[SP_effects_names]
+#Plot 2 - QQ Plot of WP Effects
+WP_effects_names <- c(
+  "T",    # WP main effect
+  "S",    # WP main effect
+  "P",    # WP main effect
+  "T:S",  # WP interaction
+  "T:P",  # WP interaction
+  "P:S"   # WP interaction
 )
-
-
-# Model for SP factors and WP:SP interactions
-SP_terms <- paste(
-  "(", 
-  paste(SP_factors, collapse = " + "), 
-  ")^2"
-)
-
-# Interactions between each WP_factor and each SP_factor
-WP_SP_interactions <- paste(
-  outer(
-    WP_factors,
-    SP_factors,
-    function(w, s) paste(w, s, sep = ":")
-  ),
-  collapse = " + "
-)
-# Combine into one formula string
-formula_SW <- paste(
-  "Denier ~",
-  SP_terms,
-  "+",
-  WP_SP_interactions
-)
-
-# If you need the split-plot error structure, add + Error(WP)
-# formula_str <- paste(formula_str, "+ Error(WP)")
-
-
-model_SW <- lm(formula_SW, data = Ys_data)
-effects_SW <- coef(model_SW)[-1]
-effect_names_SW <- names(coef(model_SW))[-1]
-
-halfnormal(
-  effects_SW,
-  main = "Half-Normal Plot for S Model :\nSP Factors + 2-way Interactions +\n 2-way Interactions with WP Factors",
-  labs = effect_names_SW,
-  alpha = 1
-)
-
+WP_effects <- effects[WP_effects_names]
 ```
 
+**Method 7 Lenth Method for S Model**
+```{r S Model with Lenth Method - 2 Plots}
+# Model with all main effects and 2-way interactions
+formula_7S <- as.formula(paste("Y_S ~ (", 
+    paste(linear_terms, collapse = " + "),")^2"))
+model_7S <- lm(formula_7S, data = Ys_data)  # Use lm()
+effects <- coef(model_7S)[-1]    # Remove intercept
+# Plot 1 - Lenth Plot of SP Effects
+SP_effects_names <- c(
+  "D",    # SP main effect
+  "R",    # SP main effect
+  "D:R",  # SP interaction
+  "T:D",  # SP x WP
+  "T:R",  # SP x WP
+  "P:D",  # SP x WP
+  "P:R",  # SP x WP
+  "S:D",  # SP x WP
+  "S:R"   # SP x WP
+)
+SP_effects <- effects[SP_effects_names]
+#Plot 2 - Lenth Plot of WP Effects
+WP_effects_names <- c(
+  "T",    # WP main effect
+  "S",    # WP main effect
+  "P",    # WP main effect
+  "T:S",  # WP interaction
+  "T:P",  # WP interaction
+  "P:S"   # WP interaction
+)
+WP_effects <- effects[WP_effects_names]
+```
+
+**2 x 2 Plot of QQ and Lenth Plots for S Model
+```{r 2x2 Plot for Section 1.2.4}
+pdf("2x2_plot.pdf", width = 8, height = 8)
+par(mfrow = c(2, 2))
+
+# plot1 - WP QQ Plot
+halfnormal(
+  WP_effects,
+  main = "Half-Normal Plot for S Model :\nWP Factors + 2-way Interactions",
+  labs = WP_effects_names,
+  alpha = 1
+)
+
+# plot2 - WP Lenth Plot
+LenthPlot(WP_effects, main = "Lenth Plot for S Model: WP Effects")
+
+# plot3 - SP QQ Plot
+halfnormal(
+  SP_effects,
+  main = "Half-Normal Plot for S Model :\nSP Factors + 2-way Interactions +\n2-way Interactions with WP Factors",
+  labs = SP_effects_names,
+  alpha = 1
+)
+# plot4 - SP Lenth Plot
+LenthPlot(SP_effects, main = "Lenth Plot for S Model: SP Effects")
+dev.off()
+```
+
+**Import WP Factor PLA Data **
+```{r Import and Preprocess WP Data}
+Yw_data <- read.csv("Data/YwData.csv")
+Yw_data <- Yw_data[,14:17]
+cat("WP PLA Data Set\n")
+print(Yw_data)
+```
 
 **Method 6 QQ Plot Method for W Model**
-```{r W Model with QQ Plot}
-library(FrF2)
-
-WP_factors <- colnames(Ys_data[1:3])
-
+```{r W Model with QQ Plot - 1 Plot}
 # Model for WP factors (main effects, 2- and 3-way interactions)
-formula_wp <- as.formula(
-  paste(
-    "Denier ~ (",
-    paste(WP_factors, collapse = " + "),
-    ")^3"
-  )
-)
-                         
-model_wp <- lm(formula_wp, data = Ys_data)
-effects_wp <- coef(model_wp)[-1]
-effect_names_wp <- names(coef(model_wp))[-1]
-
+formula_6W <- as.formula(paste("Y_W ~ (",
+    paste(WP_factors, collapse = " + "),")^3"))
+model_6W <- lm(formula_6W, data = Yw_data)
+effects_6W <- coef(model_6W)[-1]
+effect_names_6W <- names(coef(model_6W))[-1]
 halfnormal(
-  effects_wp,
+  effects_6W,
   main = "Half-Normal Plot for W Model:\nWP Factors + 2 & 3-way Interactions",
-  labs = effect_names_wp,
+  labs = effect_names_6W,
   alpha = 1
 )
-
-
 ```
-
 
 **Method 7 Lenth Method for W Model**
 ```{r W Model by Lenth Method}
-
-library(BsMD)
-
-WP_factors <- colnames(Ys_data[1:3])
-
 # Model for WP factors (main effects, 2- and 3-way interactions)
-formula_wp <- as.formula(
-  paste(
-    "Denier ~ (",
-    paste(WP_factors, collapse = " + "),
-    ")^3"
-  )
-)
+formula_7W <- as.formula(paste("Y_W ~ (",
+    paste(WP_factors, collapse = " + "),")^3"))
+model_7W <- lm(formula_7W, data = Yw_data)
+effects_7W <- coef(model_7W)[-1]  # Remove intercept
+LenthPlot(effects_7W, main = "Lenth Plot for W Model")
+```
 
-model_wp <- lm(formula_wp, data = Yw_data)
-effects <- coef(model_wp)[-1]  # Remove intercept
-LenthPlot(effects, main = "Lenth Plot for W Model: All Effects")
+**Method 8 Sequential Split Plot Model**
+```{r W Model and S-W Model}
+
+#S Model - SP Factors (main SP effects, 2-way interactions
+# and 2-way interactions with WP Factors)
+formula_S <- as.formula(paste("Y_S ~ (", 
+    paste(linear_terms, collapse = " + "),")^2"))
+#Create model matrix for S Model
+Y_S <- Ys_data$Y_S
+X_S <- model.matrix(formula_S, data = Ys_data)
+
+#W Model - WP factors (main WP effects, 2-way interactions)
+formula_W <- as.formula(paste("Y_W ~ (",
+    paste(WP_factors, collapse = " + "),")^2"))
+
+X_W <- model.matrix(formula_W, data = Yw_data)
+# Replicate each row 4 times
+X_W <- X_W[rep(1:nrow(X_W), each = 4), ][-20, ]
+
+# Drop row 20
+X_W_rep <- X_W_rep[-20, ]
+Y_W <- rep(Yw_data$Y_W, each = 4)[-20]
+df_W <- data.frame(Y_W, X_W)
+
+#Linear Model Fit for W Model
+W_Model <- summary(lm(formula_W, data = Yw_data))
+W_Model
+
+
+#S-W Model
+#Create model matrix for S-W Model
+X_SW <- X_S[, SP_effects_names]
+Y_SW <- Y_S - Y_W
+df_SW <- data.frame(Y_SW, X_SW)
+formula_SW <- as.formula(
+    paste("Y_SW ~", paste(colnames(X_SW), collapse = " + ")))
+#Linear Model Fit for S-W Model
+SW_Model <- summary(lm(formula_SW, data = df_SW))
+
 
 ```
 
-**Method 8 Sequential Split Plot Method for W Model**
-```{r W Model by SSP Method}
 
-WP_factors <- colnames(Yw_data[1:3])
-
-
-# Model for WP factors (main effects, 2-way interactions)
-formula_wp <- as.formula(
-  paste(
-    "Denier ~ (",
-    paste(WP_factors, collapse = " + "),
-    ")^2"
-  )
-)
-
-Method_8 <- summary(lm(formula_wp, data = Yw_data))
-
-Method_8
-
-```

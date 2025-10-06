@@ -1,4 +1,4 @@
-﻿Sample ID,Temperature (C),Throughput at Metering Pump (GHM),Take-Up Speed at Winder (m/min),Filament Diameter (microns),Force at Break (N),Tenacity (gf/tex),Elongation at Break (%),Young's Modulus (N/mm),Crystallinity (%),Mn (Da),Mw (Da),Polydispersity Index (Mw/Mn),T,P,S,Denier,Tex,MW
+﻿Sample ID,Temperature (C),Throughput at Metering Pump (GHM),Take-Up Speed at Winder (m/min),Filament Diameter (microns),Force at Break (N),Tenacity (gf/tex),Elongation at Break (%),Young's Modulus (N/mm),Crystallinity (%),Mn (Da),Mw (Da),Polydispersity Index (Mw/Mn),T,P,S,Y_W,Tex,MW
 1A,220,0.3,500,27.7,2.4,4.94,323.7,3.5,22.83,60979,107368,1.76,-1,-1,-1,445.5,49.5,-0.105266667
 1B,220,0.3,1500,16.7,2.3,14.71,138.9,1.4,37.43,64086,108968,1.7,-1,-1,1,145.8,16.2,-0.091933333
 1C,220,0.6,500,40.9,6.4,6.38,394.9,6.1,19.98,64337,110867,1.72,-1,1,-1,914.7,101.6333333,-0.076108333

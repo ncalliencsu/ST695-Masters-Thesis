@@ -203,7 +203,7 @@
 
 \title{ST695\_SPD\_Analysis}
 \author{}
-\date{2025-09-29}
+\date{2025-10-05}
 \begin{document}
 \maketitle
 
@@ -212,7 +212,7 @@
 
 \begin{Shaded}
 \begin{Highlighting}[]
-\FunctionTok{library}\NormalTok{(lmerTest) }\CommentTok{\#Needed for REML Analysis}
+\FunctionTok{library}\NormalTok{(lmerTest) }\CommentTok{\#For REML Analysis}
 \end{Highlighting}
 \end{Shaded}
 
@@ -241,23 +241,126 @@ The following object is masked from 'package:stats':
     step
 \end{verbatim}
 
-\textbf{Import PLA Data}
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{library}\NormalTok{(afex) }\CommentTok{\#For ANOVA Analysis}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+************
+Welcome to afex. For support visit: http://afex.singmann.science/
+\end{verbatim}
+
+\begin{verbatim}
+- Functions for ANOVAs: aov_car(), aov_ez(), and aov_4()
+- Methods for calculating p-values with mixed(): 'S', 'KR', 'LRT', and 'PB'
+- 'afex_aov' and 'mixed' objects can be passed to emmeans() for follow-up tests
+- Get and set global package options with: afex_options()
+- Set sum-to-zero contrasts globally: set_sum_contrasts()
+- For example analyses see: browseVignettes("afex")
+************
+\end{verbatim}
+
+\begin{verbatim}
+
+Attaching package: 'afex'
+\end{verbatim}
+
+\begin{verbatim}
+The following object is masked from 'package:lme4':
+
+    lmer
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{library}\NormalTok{(FrF2) }\CommentTok{\#For QQ Plots}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+Loading required package: DoE.base
+\end{verbatim}
+
+\begin{verbatim}
+Loading required package: grid
+\end{verbatim}
+
+\begin{verbatim}
+Loading required package: conf.design
+\end{verbatim}
+
+\begin{verbatim}
+
+Attaching package: 'conf.design'
+\end{verbatim}
+
+\begin{verbatim}
+The following object is masked from 'package:lme4':
+
+    factorize
+\end{verbatim}
+
+\begin{verbatim}
+Registered S3 method overwritten by 'DoE.base':
+  method           from       
+  factorize.factor conf.design
+\end{verbatim}
+
+\begin{verbatim}
+
+Attaching package: 'DoE.base'
+\end{verbatim}
+
+\begin{verbatim}
+The following objects are masked from 'package:stats':
+
+    aov, lm
+\end{verbatim}
+
+\begin{verbatim}
+The following object is masked from 'package:graphics':
+
+    plot.design
+\end{verbatim}
+
+\begin{verbatim}
+The following object is masked from 'package:base':
+
+    lengths
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{library}\NormalTok{(BsMD) }\CommentTok{\#For Lenth Plots}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+
+Attaching package: 'BsMD'
+\end{verbatim}
+
+\begin{verbatim}
+The following object is masked from 'package:FrF2':
+
+    DanielPlot
+\end{verbatim}
+
+\textbf{Import SP PLA Data Set }
 
 \begin{Shaded}
 \begin{Highlighting}[]
 \NormalTok{Ys\_data }\OtherTok{\textless{}{-}} \FunctionTok{read.csv}\NormalTok{(}\StringTok{"Data/YsData.csv"}\NormalTok{)}
 \NormalTok{Ys\_data }\OtherTok{\textless{}{-}}\NormalTok{ Ys\_data[,}\DecValTok{7}\SpecialCharTok{:}\DecValTok{13}\NormalTok{]}
 \NormalTok{Ys\_data}\SpecialCharTok{$}\NormalTok{WP}\OtherTok{=}\FunctionTok{as.factor}\NormalTok{(Ys\_data}\SpecialCharTok{$}\NormalTok{WP)}
-
-\NormalTok{Yw\_data }\OtherTok{\textless{}{-}} \FunctionTok{read.csv}\NormalTok{(}\StringTok{"Data/YwData.csv"}\NormalTok{)}
-\NormalTok{Yw\_data }\OtherTok{\textless{}{-}}\NormalTok{ Yw\_data[,}\DecValTok{14}\SpecialCharTok{:}\DecValTok{17}\NormalTok{]}
-
-\FunctionTok{cat}\NormalTok{(}\StringTok{" Complete PLA Data Set}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+\FunctionTok{cat}\NormalTok{(}\StringTok{"SP PLA Data Set}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
 \end{Highlighting}
 \end{Shaded}
 
 \begin{verbatim}
- Complete PLA Data Set
+SP PLA Data Set
 \end{verbatim}
 
 \begin{Shaded}
@@ -301,34 +404,6 @@ The following object is masked from 'package:stats':
 31  1  1  1  1  1  8  120.3
 \end{verbatim}
 
-\begin{Shaded}
-\begin{Highlighting}[]
-\FunctionTok{cat}\NormalTok{(}\StringTok{" Whole PLot PLA Data Set}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
-\end{Highlighting}
-\end{Shaded}
-
-\begin{verbatim}
- Whole PLot PLA Data Set
-\end{verbatim}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\FunctionTok{print}\NormalTok{(Yw\_data)}
-\end{Highlighting}
-\end{Shaded}
-
-\begin{verbatim}
-   T  P  S Denier
-1 -1 -1 -1  445.5
-2 -1 -1  1  145.8
-3 -1  1 -1  914.7
-4 -1  1  1  302.1
-5  1 -1 -1  434.2
-6  1 -1  1  145.8
-7  1  1 -1  882.6
-8  1  1  1  277.2
-\end{verbatim}
-
 \textbf{Method 1 (Ordinary Least Squares)}
 
 \begin{Shaded}
@@ -336,16 +411,10 @@ The following object is masked from 'package:stats':
 \NormalTok{WP\_factors }\OtherTok{\textless{}{-}} \FunctionTok{colnames}\NormalTok{(Ys\_data[}\DecValTok{1}\SpecialCharTok{:}\DecValTok{3}\NormalTok{])}
 \NormalTok{SP\_factors }\OtherTok{\textless{}{-}} \FunctionTok{colnames}\NormalTok{(Ys\_data[}\DecValTok{4}\SpecialCharTok{:}\DecValTok{5}\NormalTok{])}
 \NormalTok{linear\_terms }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(WP\_factors, SP\_factors)}
-
 \CommentTok{\# Model with all main effects and 2{-}way interactions}
-\NormalTok{fo }\OtherTok{\textless{}{-}} \FunctionTok{as.formula}\NormalTok{(}
-  \FunctionTok{paste}\NormalTok{(}
-    \StringTok{"Denier \textasciitilde{} ("}\NormalTok{, }
-    \FunctionTok{paste}\NormalTok{(linear\_terms, }\AttributeTok{collapse =} \StringTok{" + "}\NormalTok{), }
-    \StringTok{")\^{}2"}
-\NormalTok{  )}
-\NormalTok{)}
-
+\NormalTok{fo }\OtherTok{\textless{}{-}} \FunctionTok{as.formula}\NormalTok{(}\FunctionTok{paste}\NormalTok{(}\StringTok{"Denier \textasciitilde{} ("}\NormalTok{, }
+    \FunctionTok{paste}\NormalTok{(linear\_terms, }\AttributeTok{collapse =} \StringTok{" + "}\NormalTok{),}\StringTok{")\^{}2"}
+\NormalTok{  ))}
 \NormalTok{Method\_1 }\OtherTok{\textless{}{-}} \FunctionTok{summary}\NormalTok{(}\FunctionTok{lm}\NormalTok{(fo, }\AttributeTok{data =}\NormalTok{ Ys\_data))}
 \NormalTok{Method\_1}
 \end{Highlighting}
@@ -354,7 +423,7 @@ The following object is masked from 'package:stats':
 \begin{verbatim}
 
 Call:
-lm(formula = fo, data = Ys_data)
+lm.default(formula = fo, data = Ys_data)
 
 Residuals:
     Min      1Q  Median      3Q     Max 
@@ -393,25 +462,15 @@ The error variance (mean squared error, MSE) is 2474.8 in your model.
 This value is the estimate of the residual variance from your standard
 linear model.
 
-\textbf{Method 2 (Restricted Maximum Likelihood)}
+\textbf{Method 2A (Restricted Maximum Likelihood using Satterwaithe)}
 
 \begin{Shaded}
 \begin{Highlighting}[]
-\NormalTok{WP\_factors }\OtherTok{\textless{}{-}} \FunctionTok{colnames}\NormalTok{(Ys\_data[}\DecValTok{1}\SpecialCharTok{:}\DecValTok{3}\NormalTok{])}
-\NormalTok{SP\_factors }\OtherTok{\textless{}{-}} \FunctionTok{colnames}\NormalTok{(Ys\_data[}\DecValTok{4}\SpecialCharTok{:}\DecValTok{5}\NormalTok{])}
-
-\NormalTok{linear\_terms }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(WP\_factors, SP\_factors)}
-
 \CommentTok{\# Model with all main effects, 2{-}way interactions, and random WP effect}
-\NormalTok{fo }\OtherTok{\textless{}{-}} \FunctionTok{as.formula}\NormalTok{(}
-  \FunctionTok{paste}\NormalTok{(}
-    \StringTok{"Denier \textasciitilde{} ("}\NormalTok{, }
-    \FunctionTok{paste}\NormalTok{(linear\_terms, }\AttributeTok{collapse =} \StringTok{" + "}\NormalTok{), }
-    \StringTok{")\^{}2 + (1|WP)"}
-\NormalTok{  )}
-\NormalTok{)}
-
-\NormalTok{Method\_2 }\OtherTok{\textless{}{-}} \FunctionTok{summary}\NormalTok{(}\FunctionTok{lmer}\NormalTok{(fo, }\AttributeTok{data =}\NormalTok{ Ys\_data))}
+\NormalTok{fo }\OtherTok{\textless{}{-}} \FunctionTok{as.formula}\NormalTok{(}\FunctionTok{paste}\NormalTok{(}\StringTok{"Denier \textasciitilde{} ("}\NormalTok{, }
+    \FunctionTok{paste}\NormalTok{(linear\_terms, }\AttributeTok{collapse =} \StringTok{" + "}\NormalTok{),}\StringTok{")\^{}2 + (1|WP)"}
+\NormalTok{  ))}
+\NormalTok{Method\_2A }\OtherTok{\textless{}{-}} \FunctionTok{summary}\NormalTok{(}\FunctionTok{lmer}\NormalTok{(fo, }\AttributeTok{data =}\NormalTok{ Ys\_data))}
 \end{Highlighting}
 \end{Shaded}
 
@@ -421,7 +480,7 @@ boundary (singular) fit: see help('isSingular')
 
 \begin{Shaded}
 \begin{Highlighting}[]
-\NormalTok{Method\_2}
+\NormalTok{Method\_2A}
 \end{Highlighting}
 \end{Shaded}
 
@@ -477,27 +536,93 @@ optimizer (nloptwrap) convergence code: 0 (OK)
 boundary (singular) fit: see help('isSingular')
 \end{verbatim}
 
-\textbf{Method 4 ANOVA}
+\textbf{Method 2B (Restricted Maximum Likelihood using Kenward Roger)}
 
 \begin{Shaded}
 \begin{Highlighting}[]
-\NormalTok{WP\_factors }\OtherTok{\textless{}{-}} \FunctionTok{colnames}\NormalTok{(Ys\_data[}\DecValTok{1}\SpecialCharTok{:}\DecValTok{3}\NormalTok{])}
-\NormalTok{SP\_factors }\OtherTok{\textless{}{-}} \FunctionTok{colnames}\NormalTok{(Ys\_data[}\DecValTok{4}\SpecialCharTok{:}\DecValTok{5}\NormalTok{])}
-\NormalTok{linear\_terms }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(WP\_factors, SP\_factors)}
+\CommentTok{\# Model with all main effects, 2{-}way interactions, and random WP effect}
+\NormalTok{fo }\OtherTok{\textless{}{-}} \FunctionTok{as.formula}\NormalTok{(}\FunctionTok{paste}\NormalTok{(}\StringTok{"Denier \textasciitilde{} ("}\NormalTok{, }
+    \FunctionTok{paste}\NormalTok{(linear\_terms, }\AttributeTok{collapse =} \StringTok{" + "}\NormalTok{),}\StringTok{")\^{}2+ (1|WP)"}
+\NormalTok{  ))}
+\CommentTok{\# Fit model with Kenward{-}Roger method}
+\NormalTok{model\_kr }\OtherTok{\textless{}{-}} \FunctionTok{lmer}\NormalTok{(fo, }\AttributeTok{data =}\NormalTok{ Ys\_data, }\AttributeTok{REML =} \ConstantTok{TRUE}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
 
+\begin{verbatim}
+boundary (singular) fit: see help('isSingular')
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{Method\_2B }\OtherTok{\textless{}{-}} \FunctionTok{summary}\NormalTok{(model\_kr, }\AttributeTok{ddf =} \StringTok{"Kenward{-}Roger"}\NormalTok{)}
+\NormalTok{Method\_2B}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+Linear mixed model fit by REML. t-tests use Kenward-Roger's method [
+lmerModLmerTest]
+Formula: fo
+   Data: Ys_data
+
+REML criterion at convergence: 214.5
+
+Scaled residuals: 
+     Min       1Q   Median       3Q      Max 
+-1.25093 -0.52338 -0.01445  0.56145  1.16801 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ WP       (Intercept)    0      0.00   
+ Residual             2474     49.74   
+Number of obs: 31, groups:  WP, 8
+
+Fixed effects:
+             Estimate Std. Error        df t value Pr(>|t|)    
+(Intercept)  299.0906     9.1398    0.9845  32.724   0.0205 *  
+T             -3.1156     9.1398    0.9845  -0.341   0.7915    
+P             98.4344     9.1398    0.9845  10.770   0.0610 .  
+S           -145.0969     9.1398    0.9845 -15.875   0.0417 *  
+D           -131.9031     9.1398   14.1074 -14.432 7.66e-10 ***
+R            -19.4969     9.1398   14.1074  -2.133   0.0509 .  
+T:P            0.2406     9.1398    0.9845   0.026   0.9833    
+T:S           -3.0781     9.1398    0.9845  -0.337   0.7939    
+T:D           -0.9719     9.1398   14.1074  -0.106   0.9168    
+T:R           -2.8156     9.1398   14.1074  -0.308   0.7625    
+P:S          -37.0906     9.1398    0.9845  -4.058   0.1568    
+P:D          -54.6844     9.1398   14.1074  -5.983 3.25e-05 ***
+P:R            0.3344     9.1398   14.1074   0.037   0.9713    
+S:D           86.8969     9.1398   14.1074   9.507 1.63e-07 ***
+S:R            2.9406     9.1398   14.1074   0.322   0.7524    
+D:R          -10.4156     9.1398   14.1074  -1.140   0.2734    
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+\end{verbatim}
+
+\begin{verbatim}
+
+Correlation matrix not shown by default, as p = 16 > 12.
+Use print(x, correlation=TRUE)  or
+    vcov(x)        if you need it
+\end{verbatim}
+
+\begin{verbatim}
+optimizer (nloptwrap) convergence code: 0 (OK)
+boundary (singular) fit: see help('isSingular')
+\end{verbatim}
+
+\textbf{Method 4 ANOVA using Base R}
+
+\begin{Shaded}
+\begin{Highlighting}[]
 \CommentTok{\# Model with all main effects, 2{-}way interactions,}
 \CommentTok{\#and split{-}plot error structure}
-
-\NormalTok{fo }\OtherTok{\textless{}{-}} \FunctionTok{as.formula}\NormalTok{(}
-  \FunctionTok{paste}\NormalTok{(}
-    \StringTok{"Denier \textasciitilde{} ("}\NormalTok{, }
-    \FunctionTok{paste}\NormalTok{(linear\_terms, }\AttributeTok{collapse =} \StringTok{" + "}\NormalTok{), }
-    \StringTok{")\^{}2 + Error(WP)"}
-\NormalTok{  )}
-\NormalTok{)}
-
-\NormalTok{Method\_4\_ANOVA }\OtherTok{\textless{}{-}} \FunctionTok{summary}\NormalTok{(}\FunctionTok{aov}\NormalTok{(fo, }\AttributeTok{data =}\NormalTok{ Ys\_data))}
-\NormalTok{Method\_4\_ANOVA}
+\NormalTok{fo }\OtherTok{\textless{}{-}} \FunctionTok{as.formula}\NormalTok{(}\FunctionTok{paste}\NormalTok{(}\StringTok{"Denier \textasciitilde{} ("}\NormalTok{, }
+    \FunctionTok{paste}\NormalTok{(linear\_terms, }\AttributeTok{collapse =} \StringTok{" + "}\NormalTok{),}\StringTok{")\^{}2 + Error(WP)"}
+\NormalTok{  ))}
+\NormalTok{Method\_4A\_ANOVA }\OtherTok{\textless{}{-}} \FunctionTok{summary}\NormalTok{(}\FunctionTok{aov}\NormalTok{(fo, }\AttributeTok{data =}\NormalTok{ Ys\_data))}
+\NormalTok{Method\_4A\_ANOVA}
 \end{Highlighting}
 \end{Shaded}
 
@@ -525,6 +650,77 @@ S:D        1 226165  226165  85.366 2.47e-07 ***
 S:R        1    377     377   0.142   0.7116    
 D:R        1   3290    3290   1.242   0.2839    
 Residuals 14  37091    2649                     
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+\end{verbatim}
+
+\textbf{Method 4 ANOVA using LMER and AFEX}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{fo }\OtherTok{\textless{}{-}} \FunctionTok{as.formula}\NormalTok{(}\FunctionTok{paste}\NormalTok{(}\StringTok{"Denier \textasciitilde{} ("}\NormalTok{, }
+    \FunctionTok{paste}\NormalTok{(linear\_terms, }\AttributeTok{collapse =} \StringTok{" + "}\NormalTok{),}\StringTok{")\^{}2 + T:S:P + (1|WP)"}
+\NormalTok{  ))}
+\NormalTok{Method\_4\_mixed }\OtherTok{\textless{}{-}} \FunctionTok{lmer}\NormalTok{(fo, }\AttributeTok{data =}\NormalTok{ Ys\_data)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+Warning in as_lmerModLT(model, devfun): Model may not have converged with 1
+eigenvalue close to zero: 4.5e-10
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{Method\_4\_mixed}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+Linear mixed model fit by REML ['lmerModLmerTest']
+Formula: fo
+   Data: Ys_data
+REML criterion at convergence: 208.2391
+Random effects:
+ Groups   Name        Std.Dev.
+ WP       (Intercept) 93.47   
+ Residual             51.47   
+Number of obs: 31, groups:  WP, 8
+Fixed Effects:
+(Intercept)            T            P            S            D            R  
+   299.1467      -3.0596      98.3783    -145.1529    -131.9592     -19.4408  
+        T:P          T:S          T:D          T:R          P:S          P:D  
+     0.1846      -3.1342      -1.0279      -2.7596     -37.0346     -54.6283  
+        P:R          S:D          S:R          D:R        T:P:S  
+     0.2783      86.9529       2.8846     -10.4717       0.8967  
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{Method\_4\_ANOVA }\OtherTok{\textless{}{-}} \FunctionTok{anova}\NormalTok{(Method\_4\_mixed, }\AttributeTok{ddf =} \StringTok{"Kenward{-}Roger"}\NormalTok{)}
+\NormalTok{Method\_4\_ANOVA}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+Type III Analysis of Variance Table with Kenward-Roger's method
+      Sum Sq Mean Sq NumDF  DenDF  F value    Pr(>F)    
+T         21      21     1 2500.8   0.0079  0.929045    
+P      21724   21724     1 2500.8   8.1997  0.004225 ** 
+S      47293   47293     1 2500.8  17.8506 2.475e-05 ***
+D     522397  522397     1   14.0 197.1783 1.215e-09 ***
+R      11338   11338     1   14.0   4.2797  0.057561 .  
+T:P        0       0     1 2500.8   0.0000  0.995714    
+T:S       22      22     1 2500.8   0.0083  0.927320    
+T:D       32      32     1   14.0   0.0120  0.914452    
+T:R      228     228     1   14.0   0.0862  0.773332    
+P:S     3079    3079     1 2500.8   1.1620  0.281150    
+P:D    89528   89528     1   14.0  33.7922 4.499e-05 ***
+P:R        2       2     1   14.0   0.0009  0.976790    
+S:D   226824  226824     1   14.0  85.6147 2.423e-07 ***
+S:R      250     250     1   14.0   0.0942  0.763397    
+D:R     3290    3290     1   14.0   1.2417  0.283911    
+T:P:S      2       2     1 2500.8   0.0007  0.979180    
 ---
 Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 \end{verbatim}
@@ -708,85 +904,86 @@ Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
 \begin{Shaded}
 \begin{Highlighting}[]
-\FunctionTok{library}\NormalTok{(FrF2)}
+\CommentTok{\# Model with all main effects and 2{-}way interactions}
+\NormalTok{fo }\OtherTok{\textless{}{-}} \FunctionTok{as.formula}\NormalTok{(}\FunctionTok{paste}\NormalTok{(}\StringTok{"Denier \textasciitilde{} ("}\NormalTok{, }
+    \FunctionTok{paste}\NormalTok{(linear\_terms, }\AttributeTok{collapse =} \StringTok{" + "}\NormalTok{),}\StringTok{")\^{}2"}
+\NormalTok{  ))}
+\NormalTok{model }\OtherTok{\textless{}{-}} \FunctionTok{lm}\NormalTok{(fo, }\AttributeTok{data =}\NormalTok{ Ys\_data)  }\CommentTok{\# Use lm()}
+\NormalTok{effects }\OtherTok{\textless{}{-}} \FunctionTok{coef}\NormalTok{(model)[}\SpecialCharTok{{-}}\DecValTok{1}\NormalTok{]    }\CommentTok{\# Remove intercept}
+\CommentTok{\# Plot 1 {-} QQ Plot of SP Effects}
+\NormalTok{SP\_effects\_names }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}
+  \StringTok{"D"}\NormalTok{,    }\CommentTok{\# SP main effect}
+  \StringTok{"R"}\NormalTok{,    }\CommentTok{\# SP main effect}
+  \StringTok{"D:R"}\NormalTok{,  }\CommentTok{\# SP interaction}
+  \StringTok{"T:D"}\NormalTok{,  }\CommentTok{\# SP x WP}
+  \StringTok{"T:R"}\NormalTok{,  }\CommentTok{\# SP x WP}
+  \StringTok{"P:D"}\NormalTok{,  }\CommentTok{\# SP x WP}
+  \StringTok{"P:R"}\NormalTok{,  }\CommentTok{\# SP x WP}
+  \StringTok{"S:D"}\NormalTok{,  }\CommentTok{\# SP x WP}
+  \StringTok{"S:R"}   \CommentTok{\# SP x WP}
+\NormalTok{)}
+\NormalTok{SP\_effects }\OtherTok{\textless{}{-}}\NormalTok{ effects[SP\_effects\_names]}
+\CommentTok{\#Plot 2 {-} QQ Plot of WP Effects}
+\NormalTok{WP\_effects\_names }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}
+  \StringTok{"T"}\NormalTok{,    }\CommentTok{\# WP main effect}
+  \StringTok{"S"}\NormalTok{,    }\CommentTok{\# WP main effect}
+  \StringTok{"P"}\NormalTok{,    }\CommentTok{\# WP main effect}
+  \StringTok{"T:S"}\NormalTok{,  }\CommentTok{\# WP interaction}
+  \StringTok{"T:P"}\NormalTok{,  }\CommentTok{\# WP interaction}
+  \StringTok{"P:S"}   \CommentTok{\# WP interaction}
+\NormalTok{)}
+\NormalTok{WP\_effects }\OtherTok{\textless{}{-}}\NormalTok{ effects[WP\_effects\_names]}
 \end{Highlighting}
 \end{Shaded}
 
-\begin{verbatim}
-Loading required package: DoE.base
-\end{verbatim}
-
-\begin{verbatim}
-Loading required package: grid
-\end{verbatim}
-
-\begin{verbatim}
-Loading required package: conf.design
-\end{verbatim}
-
-\begin{verbatim}
-
-Attaching package: 'conf.design'
-\end{verbatim}
-
-\begin{verbatim}
-The following object is masked from 'package:lme4':
-
-    factorize
-\end{verbatim}
-
-\begin{verbatim}
-Registered S3 method overwritten by 'DoE.base':
-  method           from       
-  factorize.factor conf.design
-\end{verbatim}
-
-\begin{verbatim}
-
-Attaching package: 'DoE.base'
-\end{verbatim}
-
-\begin{verbatim}
-The following objects are masked from 'package:stats':
-
-    aov, lm
-\end{verbatim}
-
-\begin{verbatim}
-The following object is masked from 'package:graphics':
-
-    plot.design
-\end{verbatim}
-
-\begin{verbatim}
-The following object is masked from 'package:base':
-
-    lengths
-\end{verbatim}
+\textbf{Method 7 Lenth Method for S Model}
 
 \begin{Shaded}
 \begin{Highlighting}[]
-\NormalTok{WP\_factors }\OtherTok{\textless{}{-}} \FunctionTok{colnames}\NormalTok{(Ys\_data[}\DecValTok{1}\SpecialCharTok{:}\DecValTok{3}\NormalTok{])}
-\NormalTok{SP\_factors }\OtherTok{\textless{}{-}} \FunctionTok{colnames}\NormalTok{(Ys\_data[}\DecValTok{4}\SpecialCharTok{:}\DecValTok{5}\NormalTok{])}
-\NormalTok{linear\_terms }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(WP\_factors, SP\_factors)}
-
-\CommentTok{\# Model for WP factors (main effects, 2{-} and 3{-}way interactions)}
-\NormalTok{formula\_wp }\OtherTok{\textless{}{-}} \FunctionTok{as.formula}\NormalTok{(}
-  \FunctionTok{paste}\NormalTok{(}
-    \StringTok{"Denier \textasciitilde{} ("}\NormalTok{, }
-    \FunctionTok{paste}\NormalTok{(WP\_factors, }\AttributeTok{collapse =} \StringTok{" + "}\NormalTok{), }
-    \StringTok{")\^{}3"}
-\NormalTok{  )}
+\CommentTok{\# Model with all main effects and 2{-}way interactions}
+\NormalTok{fo }\OtherTok{\textless{}{-}} \FunctionTok{as.formula}\NormalTok{(}\FunctionTok{paste}\NormalTok{(}\StringTok{"Denier \textasciitilde{} ("}\NormalTok{, }
+    \FunctionTok{paste}\NormalTok{(linear\_terms, }\AttributeTok{collapse =} \StringTok{" + "}\NormalTok{),}\StringTok{")\^{}2"}
+\NormalTok{  ))}
+\NormalTok{model }\OtherTok{\textless{}{-}} \FunctionTok{lm}\NormalTok{(fo, }\AttributeTok{data =}\NormalTok{ Ys\_data)  }\CommentTok{\# Use lm()}
+\NormalTok{effects }\OtherTok{\textless{}{-}} \FunctionTok{coef}\NormalTok{(model)[}\SpecialCharTok{{-}}\DecValTok{1}\NormalTok{]    }\CommentTok{\# Remove intercept}
+\CommentTok{\# Plot 1 {-} Lenth Plot of SP Effects}
+\NormalTok{SP\_effects\_names }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}
+  \StringTok{"D"}\NormalTok{,    }\CommentTok{\# SP main effect}
+  \StringTok{"R"}\NormalTok{,    }\CommentTok{\# SP main effect}
+  \StringTok{"D:R"}\NormalTok{,  }\CommentTok{\# SP interaction}
+  \StringTok{"T:D"}\NormalTok{,  }\CommentTok{\# SP x WP}
+  \StringTok{"T:R"}\NormalTok{,  }\CommentTok{\# SP x WP}
+  \StringTok{"P:D"}\NormalTok{,  }\CommentTok{\# SP x WP}
+  \StringTok{"P:R"}\NormalTok{,  }\CommentTok{\# SP x WP}
+  \StringTok{"S:D"}\NormalTok{,  }\CommentTok{\# SP x WP}
+  \StringTok{"S:R"}   \CommentTok{\# SP x WP}
 \NormalTok{)}
-                         
-\NormalTok{model\_wp }\OtherTok{\textless{}{-}} \FunctionTok{lm}\NormalTok{(formula\_wp, }\AttributeTok{data =}\NormalTok{ Ys\_data)}
-\NormalTok{effects\_wp }\OtherTok{\textless{}{-}} \FunctionTok{coef}\NormalTok{(model\_wp)[}\SpecialCharTok{{-}}\DecValTok{1}\NormalTok{]}
-\NormalTok{effect\_names\_wp }\OtherTok{\textless{}{-}} \FunctionTok{names}\NormalTok{(}\FunctionTok{coef}\NormalTok{(model\_wp))[}\SpecialCharTok{{-}}\DecValTok{1}\NormalTok{]}
+\NormalTok{SP\_effects }\OtherTok{\textless{}{-}}\NormalTok{ effects[SP\_effects\_names]}
+\CommentTok{\#Plot 2 {-} Lenth Plot of WP Effects}
+\NormalTok{WP\_effects\_names }\OtherTok{\textless{}{-}} \FunctionTok{c}\NormalTok{(}
+  \StringTok{"T"}\NormalTok{,    }\CommentTok{\# WP main effect}
+  \StringTok{"S"}\NormalTok{,    }\CommentTok{\# WP main effect}
+  \StringTok{"P"}\NormalTok{,    }\CommentTok{\# WP main effect}
+  \StringTok{"T:S"}\NormalTok{,  }\CommentTok{\# WP interaction}
+  \StringTok{"T:P"}\NormalTok{,  }\CommentTok{\# WP interaction}
+  \StringTok{"P:S"}   \CommentTok{\# WP interaction}
+\NormalTok{)}
+\NormalTok{WP\_effects }\OtherTok{\textless{}{-}}\NormalTok{ effects[WP\_effects\_names]}
+\end{Highlighting}
+\end{Shaded}
 
+**2 x 2 Plot of QQ and Lenth Plots for S Model
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{pdf}\NormalTok{(}\StringTok{"2x2\_plot.pdf"}\NormalTok{, }\AttributeTok{width =} \DecValTok{8}\NormalTok{, }\AttributeTok{height =} \DecValTok{8}\NormalTok{)}
+\FunctionTok{par}\NormalTok{(}\AttributeTok{mfrow =} \FunctionTok{c}\NormalTok{(}\DecValTok{2}\NormalTok{, }\DecValTok{2}\NormalTok{))}
+
+\CommentTok{\# plot1 {-} WP QQ Plot}
 \FunctionTok{halfnormal}\NormalTok{(}
-\NormalTok{  effects\_wp,}
-  \AttributeTok{main =} \StringTok{"Half{-}Normal Plot for S Model:}\SpecialCharTok{\textbackslash{}n}\StringTok{WP Factors + 2 \& 3{-}way Interactions"}\NormalTok{,}
-  \AttributeTok{labs =}\NormalTok{ effect\_names\_wp,}
+\NormalTok{  WP\_effects,}
+  \AttributeTok{main =} \StringTok{"Half{-}Normal Plot for S Model :}\SpecialCharTok{\textbackslash{}n}\StringTok{WP Factors + 2{-}way Interactions"}\NormalTok{,}
+  \AttributeTok{labs =}\NormalTok{ WP\_effects\_names,}
   \AttributeTok{alpha =} \DecValTok{1}
 \NormalTok{)}
 \end{Highlighting}
@@ -796,46 +993,25 @@ The following object is masked from 'package:base':
 simulated critical values not available for all requests, used conservative ones
 \end{verbatim}
 
-\pandocbounded{\includegraphics[keepaspectratio]{ST695_SPD_Analysis_files/figure-latex/S Model with QQ Plot-1.pdf}}
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# plot2 {-} WP Lenth Plot}
+\FunctionTok{LenthPlot}\NormalTok{(WP\_effects, }\AttributeTok{main =} \StringTok{"Lenth Plot for S Model: WP Effects"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+    alpha       PSE        ME       SME 
+ 0.050000  4.645312 19.987167 50.026631 
+\end{verbatim}
 
 \begin{Shaded}
 \begin{Highlighting}[]
-\CommentTok{\# Model for SP factors and WP:SP interactions}
-\NormalTok{SP\_terms }\OtherTok{\textless{}{-}} \FunctionTok{paste}\NormalTok{(}
-  \StringTok{"("}\NormalTok{, }
-  \FunctionTok{paste}\NormalTok{(SP\_factors, }\AttributeTok{collapse =} \StringTok{" + "}\NormalTok{), }
-  \StringTok{")\^{}2"}
-\NormalTok{)}
-
-\CommentTok{\# Interactions between each WP\_factor and each SP\_factor}
-\NormalTok{WP\_SP\_interactions }\OtherTok{\textless{}{-}} \FunctionTok{paste}\NormalTok{(}
-  \FunctionTok{outer}\NormalTok{(}
-\NormalTok{    WP\_factors,}
-\NormalTok{    SP\_factors,}
-    \ControlFlowTok{function}\NormalTok{(w, s) }\FunctionTok{paste}\NormalTok{(w, s, }\AttributeTok{sep =} \StringTok{":"}\NormalTok{)}
-\NormalTok{  ),}
-  \AttributeTok{collapse =} \StringTok{" + "}
-\NormalTok{)}
-\CommentTok{\# Combine into one formula string}
-\NormalTok{formula\_SW }\OtherTok{\textless{}{-}} \FunctionTok{paste}\NormalTok{(}
-  \StringTok{"Denier \textasciitilde{}"}\NormalTok{,}
-\NormalTok{  SP\_terms,}
-  \StringTok{"+"}\NormalTok{,}
-\NormalTok{  WP\_SP\_interactions}
-\NormalTok{)}
-
-\CommentTok{\# If you need the split{-}plot error structure, add + Error(WP)}
-\CommentTok{\# formula\_str \textless{}{-} paste(formula\_str, "+ Error(WP)")}
-
-
-\NormalTok{model\_SW }\OtherTok{\textless{}{-}} \FunctionTok{lm}\NormalTok{(formula\_SW, }\AttributeTok{data =}\NormalTok{ Ys\_data)}
-\NormalTok{effects\_SW }\OtherTok{\textless{}{-}} \FunctionTok{coef}\NormalTok{(model\_SW)[}\SpecialCharTok{{-}}\DecValTok{1}\NormalTok{]}
-\NormalTok{effect\_names\_SW }\OtherTok{\textless{}{-}} \FunctionTok{names}\NormalTok{(}\FunctionTok{coef}\NormalTok{(model\_SW))[}\SpecialCharTok{{-}}\DecValTok{1}\NormalTok{]}
-
+\CommentTok{\# plot3 {-} SP QQ Plot}
 \FunctionTok{halfnormal}\NormalTok{(}
-\NormalTok{  effects\_SW,}
-  \AttributeTok{main =} \StringTok{"Half{-}Normal Plot for S Model :}\SpecialCharTok{\textbackslash{}n}\StringTok{SP Factors + 2{-}way Interactions +}\SpecialCharTok{\textbackslash{}n}\StringTok{ 2{-}way Interactions with WP Factors"}\NormalTok{,}
-  \AttributeTok{labs =}\NormalTok{ effect\_names\_SW,}
+\NormalTok{  SP\_effects,}
+  \AttributeTok{main =} \StringTok{"Half{-}Normal Plot for S Model :}\SpecialCharTok{\textbackslash{}n}\StringTok{SP Factors + 2{-}way Interactions +}\SpecialCharTok{\textbackslash{}n}\StringTok{2{-}way Interactions with WP Factors"}\NormalTok{,}
+  \AttributeTok{labs =}\NormalTok{ SP\_effects\_names,}
   \AttributeTok{alpha =} \DecValTok{1}
 \NormalTok{)}
 \end{Highlighting}
@@ -845,29 +1021,72 @@ simulated critical values not available for all requests, used conservative ones
 simulated critical values not available for all requests, used conservative ones
 \end{verbatim}
 
-\pandocbounded{\includegraphics[keepaspectratio]{ST695_SPD_Analysis_files/figure-latex/S Model with QQ Plot-2.pdf}}
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# plot4 {-} SP Lenth Plot}
+\FunctionTok{LenthPlot}\NormalTok{(SP\_effects, }\AttributeTok{main =} \StringTok{"Lenth Plot for S Model: SP Effects"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+    alpha       PSE        ME       SME 
+ 0.050000  4.317187 13.739217 30.773902 
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{dev.off}\NormalTok{()}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+pdf 
+  2 
+\end{verbatim}
+
+\textbf{Import WP Factor PLA Data }
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{Yw\_data }\OtherTok{\textless{}{-}} \FunctionTok{read.csv}\NormalTok{(}\StringTok{"Data/YwData.csv"}\NormalTok{)}
+\NormalTok{Yw\_data }\OtherTok{\textless{}{-}}\NormalTok{ Yw\_data[,}\DecValTok{14}\SpecialCharTok{:}\DecValTok{17}\NormalTok{]}
+\FunctionTok{cat}\NormalTok{(}\StringTok{"WP PLA Data Set}\SpecialCharTok{\textbackslash{}n}\StringTok{"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+WP PLA Data Set
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{print}\NormalTok{(Yw\_data)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+   T  P  S Denier
+1 -1 -1 -1  445.5
+2 -1 -1  1  145.8
+3 -1  1 -1  914.7
+4 -1  1  1  302.1
+5  1 -1 -1  434.2
+6  1 -1  1  145.8
+7  1  1 -1  882.6
+8  1  1  1  277.2
+\end{verbatim}
 
 \textbf{Method 6 QQ Plot Method for W Model}
 
 \begin{Shaded}
 \begin{Highlighting}[]
-\FunctionTok{library}\NormalTok{(FrF2)}
-
-\NormalTok{WP\_factors }\OtherTok{\textless{}{-}} \FunctionTok{colnames}\NormalTok{(Ys\_data[}\DecValTok{1}\SpecialCharTok{:}\DecValTok{3}\NormalTok{])}
-
 \CommentTok{\# Model for WP factors (main effects, 2{-} and 3{-}way interactions)}
-\NormalTok{formula\_wp }\OtherTok{\textless{}{-}} \FunctionTok{as.formula}\NormalTok{(}
-  \FunctionTok{paste}\NormalTok{(}
-    \StringTok{"Denier \textasciitilde{} ("}\NormalTok{,}
-    \FunctionTok{paste}\NormalTok{(WP\_factors, }\AttributeTok{collapse =} \StringTok{" + "}\NormalTok{),}
-    \StringTok{")\^{}3"}
-\NormalTok{  )}
-\NormalTok{)}
-                         
+\NormalTok{formula\_wp }\OtherTok{\textless{}{-}} \FunctionTok{as.formula}\NormalTok{(}\FunctionTok{paste}\NormalTok{(}\StringTok{"Denier \textasciitilde{} ("}\NormalTok{,}
+    \FunctionTok{paste}\NormalTok{(WP\_factors, }\AttributeTok{collapse =} \StringTok{" + "}\NormalTok{),}\StringTok{")\^{}3"}
+\NormalTok{  ))}
 \NormalTok{model\_wp }\OtherTok{\textless{}{-}} \FunctionTok{lm}\NormalTok{(formula\_wp, }\AttributeTok{data =}\NormalTok{ Ys\_data)}
 \NormalTok{effects\_wp }\OtherTok{\textless{}{-}} \FunctionTok{coef}\NormalTok{(model\_wp)[}\SpecialCharTok{{-}}\DecValTok{1}\NormalTok{]}
 \NormalTok{effect\_names\_wp }\OtherTok{\textless{}{-}} \FunctionTok{names}\NormalTok{(}\FunctionTok{coef}\NormalTok{(model\_wp))[}\SpecialCharTok{{-}}\DecValTok{1}\NormalTok{]}
-
 \FunctionTok{halfnormal}\NormalTok{(}
 \NormalTok{  effects\_wp,}
   \AttributeTok{main =} \StringTok{"Half{-}Normal Plot for W Model:}\SpecialCharTok{\textbackslash{}n}\StringTok{WP Factors + 2 \& 3{-}way Interactions"}\NormalTok{,}
@@ -881,40 +1100,16 @@ simulated critical values not available for all requests, used conservative ones
 simulated critical values not available for all requests, used conservative ones
 \end{verbatim}
 
-\pandocbounded{\includegraphics[keepaspectratio]{ST695_SPD_Analysis_files/figure-latex/W Model with QQ Plot-1.pdf}}
+\pandocbounded{\includegraphics[keepaspectratio]{ST695_SPD_Analysis_files/figure-latex/W Model with QQ Plot - 1 Plot-1.pdf}}
 
 \textbf{Method 7 Lenth Method for W Model}
 
 \begin{Shaded}
 \begin{Highlighting}[]
-\FunctionTok{library}\NormalTok{(BsMD)}
-\end{Highlighting}
-\end{Shaded}
-
-\begin{verbatim}
-
-Attaching package: 'BsMD'
-\end{verbatim}
-
-\begin{verbatim}
-The following object is masked from 'package:FrF2':
-
-    DanielPlot
-\end{verbatim}
-
-\begin{Shaded}
-\begin{Highlighting}[]
-\NormalTok{WP\_factors }\OtherTok{\textless{}{-}} \FunctionTok{colnames}\NormalTok{(Ys\_data[}\DecValTok{1}\SpecialCharTok{:}\DecValTok{3}\NormalTok{])}
-
 \CommentTok{\# Model for WP factors (main effects, 2{-} and 3{-}way interactions)}
-\NormalTok{formula\_wp }\OtherTok{\textless{}{-}} \FunctionTok{as.formula}\NormalTok{(}
-  \FunctionTok{paste}\NormalTok{(}
-    \StringTok{"Denier \textasciitilde{} ("}\NormalTok{,}
-    \FunctionTok{paste}\NormalTok{(WP\_factors, }\AttributeTok{collapse =} \StringTok{" + "}\NormalTok{),}
-    \StringTok{")\^{}3"}
-\NormalTok{  )}
-\NormalTok{)}
-
+\NormalTok{formula\_wp }\OtherTok{\textless{}{-}} \FunctionTok{as.formula}\NormalTok{(}\FunctionTok{paste}\NormalTok{(}\StringTok{"Denier \textasciitilde{} ("}\NormalTok{,}
+    \FunctionTok{paste}\NormalTok{(WP\_factors, }\AttributeTok{collapse =} \StringTok{" + "}\NormalTok{),}\StringTok{")\^{}3"}
+\NormalTok{  ))}
 \NormalTok{model\_wp }\OtherTok{\textless{}{-}} \FunctionTok{lm}\NormalTok{(formula\_wp, }\AttributeTok{data =}\NormalTok{ Yw\_data)}
 \NormalTok{effects }\OtherTok{\textless{}{-}} \FunctionTok{coef}\NormalTok{(model\_wp)[}\SpecialCharTok{{-}}\DecValTok{1}\NormalTok{]  }\CommentTok{\# Remove intercept}
 \FunctionTok{LenthPlot}\NormalTok{(effects, }\AttributeTok{main =} \StringTok{"Lenth Plot for W Model: All Effects"}\NormalTok{)}
@@ -928,12 +1123,12 @@ The following object is masked from 'package:FrF2':
  0.05000  6.01875 22.65532 54.21875 
 \end{verbatim}
 
-\textbf{Method 8 Sequential Split Plot Method for W Model}
+\textbf{Method 8 Sequential Split Plot Model}
 
 \begin{Shaded}
 \begin{Highlighting}[]
+\CommentTok{\#W Model}
 \NormalTok{WP\_factors }\OtherTok{\textless{}{-}} \FunctionTok{colnames}\NormalTok{(Yw\_data[}\DecValTok{1}\SpecialCharTok{:}\DecValTok{3}\NormalTok{])}
-
 
 \CommentTok{\# Model for WP factors (main effects, 2{-}way interactions)}
 \NormalTok{formula\_wp }\OtherTok{\textless{}{-}} \FunctionTok{as.formula}\NormalTok{(}
@@ -944,9 +1139,9 @@ The following object is masked from 'package:FrF2':
 \NormalTok{  )}
 \NormalTok{)}
 
-\NormalTok{Method\_8 }\OtherTok{\textless{}{-}} \FunctionTok{summary}\NormalTok{(}\FunctionTok{lm}\NormalTok{(formula\_wp, }\AttributeTok{data =}\NormalTok{ Yw\_data))}
+\NormalTok{W\_Model }\OtherTok{\textless{}{-}} \FunctionTok{summary}\NormalTok{(}\FunctionTok{lm}\NormalTok{(formula\_wp, }\AttributeTok{data =}\NormalTok{ Yw\_data))}
 
-\NormalTok{Method\_8}
+\NormalTok{W\_Model}
 \end{Highlighting}
 \end{Shaded}
 
@@ -975,6 +1170,13 @@ Residual standard error: 1.45 on 1 degrees of freedom
 Multiple R-squared:      1, Adjusted R-squared:      1 
 F-statistic: 5.075e+04 on 6 and 1 DF,  p-value: 0.003398
 \end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\#S{-}W Model}
+\end{Highlighting}
+\end{Shaded}
+
 
 
 
