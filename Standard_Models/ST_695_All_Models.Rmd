@@ -21,10 +21,10 @@ library(ggplot2)
 library(dplyr)
 
 # ---- User parameters ----
-HTC <- 2
+HTC <- 3
 ETC <- 2
 r <- 2
-nsim <- 1000 # Set to a small number for demonstration
+nsim <- 100 # Set to a small number for demonstration
 Intercept <- 10
 w_names <- paste0("w", 1:HTC)
 s_names <- paste0("s", 1:ETC)

@@ -67,15 +67,61 @@ Method_4A <- summary(aov(formula_4A, data = Ys_data))
 Method_4A
 ```
 
-**Method 4B ANOVA using LMER and AFEX**
-```{r S Model by lmer with WP 3-way interaction}
-formula_4B <- as.formula(paste("Y_S ~ (", 
-    paste(linear_terms, collapse = " + "),")^2 + T:S:P + (1|WP)"))
-Method_4B_mixed <- lmer(formula_4B, data = Ys_data)
-Method_4B_mixed
-Method_4B_ANOVA <- anova(Method_4B_mixed, ddf = "Kenward-Roger")
-Method_4B_ANOVA
+**Method 4B ANOVA using Letsinger**
+```{r S Model by ANOVA using Letsinger}
+
+# Proposed ANOVA method: saturated model with all 2-way + T:P:S interaction
+
+library(readr)
+
+data <- read_csv("Data/PLA_Data.csv")
+
+# Saturated model: all 2-way interactions + T:P:S
+saturated_formula <- "Denier ~ (T + P + S + D + R)^2 + T:P:S"
+saturated_model <- lm(saturated_formula, data = data)
+
+# Reduced model: T + P + S + D + R + P:S + P:D + S:D
+reduced_formula <- "Denier ~ T + P + S + D + R + P:S + P:D + S:D"
+reduced_model <- lm(reduced_formula, data = data)
+
+# Calculate sums of squares and degrees of freedom
+SS_saturated <- sum(residuals(saturated_model)^2)
+SS_reduced <- sum(residuals(reduced_model)^2)
+df_saturated <- saturated_model$df.residual
+df_reduced <- reduced_model$df.residual
+
+MSsp <- SS_saturated / df_saturated
+MSdif <- (SS_reduced - SS_saturated) / (df_reduced - df_saturated)
+m <- 4
+sigma2_wp <- (MSdif - MSsp) / m
+sigma2_sp <- MSsp
+
+cat("=== Proposed Method Results (Saturated model: 2-way + T:P:S) ===\n")
+cat("Whole-plot error variance (σ²wp): ", round(sigma2_wp, 6), "\n")
+cat("Sub-plot error variance (σ²sp):   ", round(sigma2_sp, 6), "\n")
+cat("Total error variance:             ", round(sigma2_wp + sigma2_sp, 6), "\n")
+
+if(!is.na(sigma2_wp) && sigma2_wp >= 0) {
+  prop_wp <- sigma2_wp / (sigma2_wp + sigma2_sp) * 100
+  prop_sp <- sigma2_sp / (sigma2_wp + sigma2_sp) * 100
+  cat("Whole-plot error proportion: ", round(prop_wp, 1), "%\n")
+  cat("Sub-plot error proportion:   ", round(prop_sp, 1), "%\n")
+} else {
+  cat("*** WARNING: Negative whole-plot variance estimate! ***\n")
+  if(!is.na(sigma2_wp)) {
+    prop_wp <- sigma2_wp / (sigma2_wp + sigma2_sp) * 100
+    prop_sp <- sigma2_sp / (sigma2_wp + sigma2_sp) * 100
+    cat("Whole-plot error proportion: ", round(prop_wp, 1), "%\n")
+    cat("Sub-plot error proportion:   ", round(prop_sp, 1), "%\n")
+  }
+}
+
+cat("\n=== Reduced Model Fixed Effects ===\n")
+print(summary(reduced_model)$coefficients)
+
+# Continue with any further analysis or reporting as needed
 ```
+
 
 **Method 5A Additional Replicates**
 ```{r S Model with Additional Replicates, eval=FALSE}
@@ -251,8 +297,8 @@ print(results)
 # Model with all main effects and 2-way interactions
 formula_6S <- as.formula(paste("Y_S ~ (", 
     paste(linear_terms, collapse = " + "),")^2"))
-model_6S <- lm(formula_6S, data = Ys_data)  # Use lm()
-effects <- coef(model_6S)[-1]    # Remove intercept
+model_6S <- lm(formula_6S, data = Ys_data)  
+effects <- coef(model_6S)[-1]   #Remove intercept
 # Plot 1 - QQ Plot of SP Effects
 SP_effects_names <- c(
   "D",    # SP main effect
@@ -347,7 +393,7 @@ print(Yw_data)
 ```
 
 **Method 6 QQ Plot Method for W Model**
-```{r W Model with QQ Plot - 1 Plot}
+```{r W Model with QQ Plot}
 # Model for WP factors (main effects, 2- and 3-way interactions)
 formula_6W <- as.formula(paste("Y_W ~ (",
     paste(WP_factors, collapse = " + "),")^3"))
@@ -356,11 +402,42 @@ effects_6W <- coef(model_6W)[-1]
 effect_names_6W <- names(coef(model_6W))[-1]
 halfnormal(
   effects_6W,
-  main = "Half-Normal Plot for W Model:\nWP Factors + 2 & 3-way Interactions",
+  main = "Half-Normal Plot for W Model",
   labs = effect_names_6W,
   alpha = 1
 )
 ```
+
+```{r}
+
+# Example: Half-Normal Plot with labels and reference line
+
+set.seed(123)
+effects <- rnorm(10, mean = 0, sd = 2)  # 10 random effects
+effect_labels <- paste0("E", 1:10)
+
+# Sort absolute effects and keep labels
+order_idx <- order(abs(effects))
+abs_effects <- abs(effects)[order_idx]
+labels_sorted <- effect_labels[order_idx]
+
+n <- length(effects)
+expected <- qnorm((1:n - 0.5) / n) * sqrt(pi/2)
+
+plot(expected, abs_effects,
+     main = "Half-Normal Plot of Effects",
+     xlab = "Absolute Effects",
+     ylab = "Half-Normal Scores",
+     pch = 19)
+
+# Add labels to points
+text(expected, abs_effects, labels = labels_sorted, pos = 3, cex = 0.8)
+
+
+```
+
+
+
 
 **Method 7 Lenth Method for W Model**
 ```{r W Model by Lenth Method}
@@ -372,21 +449,23 @@ effects_7W <- coef(model_7W)[-1]  # Remove intercept
 LenthPlot(effects_7W, main = "Lenth Plot for W Model")
 ```
 
-**Method 8 Sequential Split Plot Model**
+**Method 8 Sequential Split Plot Method**
 ```{r W Model and S-W Model}
-
-#S Model - SP Factors (main SP effects, 2-way interactions
-# and 2-way interactions with WP Factors)
-formula_S <- as.formula(paste("Y_S ~ (", 
-    paste(linear_terms, collapse = " + "),")^2"))
+#-----------------------------------------------------------
+#S Model - SP Factors (WP main effects, SP main effects, 
+#2-way interactions within WP and SP and 2-way interactions 
+# with WP Factors)
+formula_S <- as.formula(paste("Y_S ~ (", paste(linear_terms, 
+                                  collapse = " + "),")^2"))
 #Create model matrix for S Model
 Y_S <- Ys_data$Y_S
 X_S <- model.matrix(formula_S, data = Ys_data)
-
+#-----------------------------------------------------------
 #W Model - WP factors (main WP effects, 2-way interactions)
-formula_W <- as.formula(paste("Y_W ~ (",
-    paste(WP_factors, collapse = " + "),")^2"))
+formula_W <- as.formula(paste("Y_W ~ (", 
+              paste(WP_factors, collapse = " + "),")^2"))
 
+#Create model matrix for W Model
 X_W <- model.matrix(formula_W, data = Yw_data)
 # Replicate each row 4 times and drop row 20.
 X_W <- X_W[rep(1:nrow(X_W), each = 4), ][-20, ]
@@ -394,21 +473,65 @@ X_W <- X_W[rep(1:nrow(X_W), each = 4), ][-20, ]
 Y_W <- rep(Yw_data$Y_W, each = 4)[-20]
 df_W <- data.frame(Y_W, X_W)
 
-#S-W Model
+cat("Linear Model Fit for W Model (OLS)", "\n")
+W_Model <- summary(lm(formula_W, data = Yw_data))
+W_Model
+#------------------------------------------------------------
+#S-W Model by Satterwaithe
 #Create model matrix for S-W Model
 X_SW <- X_S[, SP_effects_names]
 Y_SW <- Y_S - Y_W
 df_SW <- data.frame(Y_SW, X_SW, check.names = FALSE)
   formula_SW <- as.formula(
   "Y_SW ~ D + R + `D:R` + `T:D` + `T:R` + `P:D` + `P:R` + `S:D` + `S:R`")
+SW_Model <-lm(formula_SW, data = df_SW)
 
-cat("Linear Model Fit for W Model", "\n")
-W_Model <- summary(lm(formula_W, data = Yw_data))
-W_Model
 cat("\n")
-cat("Linear Model Fit for SW Model", "\n")
-SW_Model <- summary(lm(formula_SW, data = df_SW))
-SW_Model
+cat("Linear Model Fit for SW1 Model (OLS)", "\n")
+SW_Model_summary <- summary(SW_Model)
+SW_Model_summary
+#-------------------------------------------------------------
+
 ```
 
+**SSPD Method Model Adequacy Test**
+```{r SSPD Method Model Adequacy Test}
+
+# Perform F-test using ANOVA
+# model1 is the reduced model (SW Model)
+# model 2 is the full model (S Model)
+
+# SW Model Comparison
+Y_SW <- Y_S - Y_W
+
+#$Model 1 - Reduced Model
+df_SW1 <- data.frame(Y_SW, X_S, check.names = FALSE)
+formula_SW1 <- as.formula(
+  "Y_SW ~ D + R + `D:R` + `T:D` + `T:R` + `P:D` + `P:R` + `S:D` + `S:R`")
+
+SW_Model_1 <-lm(formula_SW1, data = df_SW1)
+
+#Model 2 - Full Model
+df_SW2 <- data.frame(Y_SW, X_S, check.names = FALSE)
+formula_SW2 <- as.formula(paste("Y_SW ~ (", paste(linear_terms, 
+                               collapse = " + "),")^2"))
+SW_Model_2 <-lm(formula_SW2, data = df_SW2)
+
+# Summaries
+cat("\n")
+cat("Linear Model Fit for SW1 Model (OLS)", "\n")
+SW_Model_1_summary <- summary(SW_Model_1)
+SW_Model_1_summary
+
+cat("\n")
+cat("Linear Model Fit for SW2 Model (OLS)", "\n")
+SW_Model_2_summary <- summary(SW_Model_2)
+SW_Model_2_summary
+
+
+model_adequacy <- anova(SW_Model_1, SW_Model_2)
+print(model_adequacy)
+
+
+```
 

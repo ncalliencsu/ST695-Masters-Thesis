@@ -458,32 +458,24 @@ server <- function(input, output, session) {
     # Always plot all histograms (Lenth logic removed)
     plots <- plot_overlaid_histograms(S_Model, W_Model, SW_Model, bins = 20)
 
+    #Download Handler for Summary(CSV)
     output$download_summary <- downloadHandler(
       filename = function() {
         paste0("summary_table_", Sys.Date(), ".csv")
       },
       content = function(file) {
         summary_stats <- summary_table(S_Model, W_Model, SW_Model)
-        # Combine all summaries into one data frame
-        combined <- do.call(rbind, lapply(names(summary_stats), function(name) {
-          df <- as.data.frame(summary_stats[[name]])
-          df$Parameter <- name
-          df
-        }))
-        write.csv(combined, file, row.names = FALSE)
+
+        # Simple approach - just take the first element and write it
+        if (length(summary_stats) > 0) {
+          write.csv(summary_stats[[1]], file, row.names = TRUE)
+        } else {
+          # Fallback - create empty CSV
+          write.csv(data.frame(Note = "No data available"), file, row.names = FALSE)
+        }
       }
     )
 
-    # # Download handler for summary statistics
-    # output$download_summary <- downloadHandler(
-    #   filename = function() {
-    #     paste0("summary_table_", Sys.Date(), ".csv")
-    #   },
-    #   content = function(file) {
-    #     summary_stats <- summary_table(S_Model, W_Model, SW_Model)
-    #     write.csv(summary_stats[[1]], file)
-    #   }
-    # )
     # Download handler for histograms (PDF)
     output$download_histograms <- downloadHandler(
       filename = function() {
@@ -498,26 +490,55 @@ server <- function(input, output, session) {
       }
     )
     # Download handler for simulation parameters
-    output$download_params <- downloadHandler(
+    output$download_summary <- downloadHandler(
       filename = function() {
-        paste0("simulation_parameters_", Sys.Date(), ".txt")
+        paste0("summary_table_", Sys.Date(), ".csv")
       },
       content = function(file) {
-        param_lines <- c(
-          "Simulation Parameters:",
-          paste("HTC =", input$HTC),
-          paste("ETC =", input$ETC),
-          paste("r =", input$r),
-          paste("nsim =", input$nsim),
-          paste("Intercept =", input$Intercept),
-          sapply(w_names, function(n) paste(n, "=", input[[n]])),
-          sapply(s_names, function(n) paste(n, "=", input[[n]])),
-          sapply(seq_along(interaction_names),
-                 function(i) paste(interaction_names[i], "=", input[[interaction_ids[i]]])),
-          paste("sigma2_W =", input$sigma2_W),
-          paste("sigma2_S =", input$sigma2_S)
-        )
-        writeLines(param_lines, file)
+        summary_stats <- summary_table(S_Model, W_Model, SW_Model)
+
+        # Create a more robust data frame conversion
+        combined_list <- list()
+
+        for (param_name in names(summary_stats)) {
+          param_data <- summary_stats[[param_name]]
+
+          # Handle different data structures that might be returned
+          if (is.data.frame(param_data)) {
+            # If it's already a data frame, add parameter column
+            param_data$Parameter <- param_name
+            combined_list[[param_name]] <- param_data
+          } else if (is.list(param_data)) {
+            # If it's a list of summaries, convert to data frame
+            df_rows <- list()
+            for (model_name in names(param_data)) {
+              if (is.numeric(param_data[[model_name]])) {
+                # Convert summary statistics to a single row
+                summary_row <- as.data.frame(t(param_data[[model_name]]))
+                summary_row$Model <- model_name
+                summary_row$Parameter <- param_name
+                df_rows[[model_name]] <- summary_row
+              }
+            }
+            if (length(df_rows) > 0) {
+              combined_list[[param_name]] <- do.call(rbind, df_rows)
+            }
+          }
+        }
+
+        # Combine all parameter data
+        if (length(combined_list) > 0) {
+          final_df <- do.call(rbind, combined_list)
+          rownames(final_df) <- NULL
+        } else {
+          # Fallback: create a simple summary
+          final_df <- data.frame(
+            Parameter = names(summary_stats),
+            Note = "Summary data structure not compatible for CSV export"
+          )
+        }
+
+        write.csv(final_df, file, row.names = FALSE)
       }
     )
 
