@@ -36,9 +36,18 @@ ui <- fluidPage(
       conditionalPanel(
         condition = "input.model_inadequate",
         sliderInput("inadequate_scale", "Model Inadequate Scale", min = 0.5, max = 1.5, value = 1, step = 0.01)
+      ),
+      # Unbalanced Design UI
+      checkboxInput("unbalanced_design", "Unbalanced Design", value = FALSE),
+      conditionalPanel(
+        condition = "input.unbalanced_design",
+        DT::dataTableOutput("row_selector"),
+        helpText("Select row(s) to remove for unbalanced design.")
       )
     ),
-    mainPanel(
+
+      #Main Panel
+      mainPanel(
       tabsetPanel(
         tabPanel("Summary & Plots",
           h4("Summary Table:"),
@@ -46,7 +55,7 @@ ui <- fluidPage(
           # Output area for histograms
           uiOutput("all_histograms"),
           # Download buttons for results
-          downloadButton("download_summary", "Download Summary"),
+          #downloadButton("download_summary", "Download Summary"),
           downloadButton("download_histograms", "Download Histograms (PDF)"),
           downloadButton("download_params", "Download Parameters")
           # Lenth plot output and download (REMOVED)
@@ -69,6 +78,30 @@ ui <- fluidPage(
 
 # Define the Server Logic section
 server <- function(input, output, session) {
+
+    # Unbalanced Design: Balanced Data and Row Selection Table ---
+    balanced_design <- reactive({
+    HTC <- input$HTC
+    ETC <- input$ETC
+    r <- input$r
+    x_names <- paste0("x", 1:HTC)
+    z_names <- paste0("z", 1:ETC)
+    combined_list <- c(
+      setNames(replicate(ETC, c(-1, 1), simplify = FALSE), z_names),
+      setNames(replicate(HTC, c(-1, 1), simplify = FALSE), x_names)
+    )
+    df_S <- expand.grid(combined_list)
+    df_rep_S <- df_S[rep(seq_len(nrow(df_S)), r), ]
+    row.names(df_rep_S) <- NULL
+    df_rep_S
+  })
+
+  output$row_selector <- DT::renderDataTable({
+    req(input$unbalanced_design)
+    DT::datatable(balanced_design(), selection = "multiple")
+  })
+
+
   # Dynamically generate numeric inputs for x parameters
   output$x_inputs <- renderUI({
     lapply(1:input$HTC, function(i) {
@@ -163,6 +196,25 @@ server <- function(input, output, session) {
     #repeats each whole-plot ID (from 1 to r*2^HTC) for each subplot (2^ETC times)
     WP <- as.factor(rep(seq(1, r*2^HTC), each = 2^ETC))
 
+    # --- Unbalanced Design: Remove selected rows if enabled ---
+    if (!is.null(input$unbalanced_design) && input$unbalanced_design) {
+      rows_to_remove <- input$row_selector_rows_selected
+      if (length(rows_to_remove) > 0) {
+        df_rep_S <- df_rep_S[-rows_to_remove, ]
+        WP <- WP[-rows_to_remove]
+        if (exists("df_rep_W")) {
+          df_rep_W <- df_rep_W[-rows_to_remove, ]
+        }
+        X_S <- X_S[-rows_to_remove, ]
+        X_W <- X_W[-rows_to_remove, ]
+        X_SW <- X_SW[-rows_to_remove, ]
+      }
+    }
+    # Calculate means for S and W models
+    df_S <- df_rep_S
+    df_W <- df_rep_W
+    #--------------------------------------------------
+
     # Prepare names for fixed effects
     fixed_effect_names_S <- paste0("beta", colnames(X_S))
     fixed_effect_names_W <- paste0("beta", colnames(X_W))
@@ -195,7 +247,7 @@ server <- function(input, output, session) {
     beta_S <- setNames(effects, effect_names)
     names(beta_S)[1] <- "beta*0"
     beta_W <- beta_S[!grepl("z", colnames(X_S), ignore.case = TRUE)]
-    # Calculate means for S and W models
+    # # Calculate means for S and W models
     mu_S <- X_S %*% beta_S
     mu_W <- X_W %*% beta_W
 
@@ -205,7 +257,8 @@ server <- function(input, output, session) {
       epsilon_W <- rnorm(n_groups, mean = 0, sd = sqrt(Sigma2_W))
       epsilon_W <- rep(epsilon_W, times = table(WP))
       epsilon_S <- rnorm(nrow(X_S), mean = 0, sd = sqrt(Sigma2_S))
-      # Model Inadequate logic
+
+    # Model Inadequate logic
       if (!is.null(input$model_inadequate) && input$model_inadequate) {
         scalefactor <- input$inadequate_scale
         Y_W_star <- scalefactor * mu_W + epsilon_W
@@ -216,7 +269,11 @@ server <- function(input, output, session) {
         Y_W <- mu_W + epsilon_W
       }
 
-      df_S <- data.frame(epsilon_W, df_rep_S, Y_S)
+      cat("Length epsilon_W:", length(epsilon_W), "\n")
+      cat("Rows df_S:", nrow(df_S), "\n")
+      cat("Length Y_S:", length(Y_S), "\n")
+
+      df_S <- data.frame(epsilon_W, df_S, Y_S)
 
       formula_S <- as.formula(
         paste("Y_S ~ (", paste(linear_terms_xz, collapse = " + "), ")^2 + (1|WP)"))
@@ -244,7 +301,11 @@ server <- function(input, output, session) {
     # Simulation function for W model (fixed effects)
     sim_model_W <- function(Y_W) {
       Y_W_unique <- unique(Y_W)
-      df_W <- data.frame(df_rep_W, Y_W = Y_W_unique)
+
+      cat("Rows df_W:", nrow(df_W), "\n")
+      cat("Length Y_W_unique:", length(Y_W_unique), "\n")
+      df_W <- data.frame(df_W, Y_W = Y_W_unique)
+
       formula_W <- as.formula(
         paste("Y_W ~ (", paste(x_names, collapse = " + "), ")^2"))
       rmodel_W <- summary(lm(formula_W, data = df_W))
@@ -385,7 +446,7 @@ server <- function(input, output, session) {
         p <- ggplot(df_long, aes(x = value, fill = model, color = model)) +
           geom_histogram(position = "identity", alpha = 0.4, bins = bins) +
           labs(
-            title = paste("Comparison:", col),
+            title = paste("Model Comparison Histograms for :", col),
             x = col,
             subtitle = label_text
           ) +
@@ -458,21 +519,21 @@ server <- function(input, output, session) {
     # Always plot all histograms (Lenth logic removed)
     plots <- plot_overlaid_histograms(S_Model, W_Model, SW_Model, bins = 20)
 
-    output$download_summary <- downloadHandler(
-      filename = function() {
-        paste0("summary_table_", Sys.Date(), ".csv")
-      },
-      content = function(file) {
-        summary_stats <- summary_table(S_Model, W_Model, SW_Model)
-        # Combine all summaries into one data frame
-        combined <- do.call(rbind, lapply(names(summary_stats), function(name) {
-          df <- as.data.frame(summary_stats[[name]])
-          df$Parameter <- name
-          df
-        }))
-        write.csv(combined, file, row.names = FALSE)
-      }
-    )
+    # output$download_summary <- downloadHandler(
+    #   filename = function() {
+    #     paste0("summary_table_", Sys.Date(), ".csv")
+    #   },
+    #   content = function(file) {
+    #     summary_stats <- summary_table(S_Model, W_Model, SW_Model)
+    #     # Combine all summaries into one data frame
+    #     combined <- do.call(rbind, lapply(names(summary_stats), function(name) {
+    #       df <- as.data.frame(summary_stats[[name]])
+    #       df$Parameter <- name
+    #       df
+    #     }))
+    #     write.csv(combined, file, row.names = FALSE)
+    #   }
+    # )
 
     # # Download handler for summary statistics
     # output$download_summary <- downloadHandler(
