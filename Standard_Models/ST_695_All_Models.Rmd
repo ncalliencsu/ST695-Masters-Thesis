@@ -23,8 +23,8 @@ library(dplyr)
 # ---- User parameters ----
 HTC <- 3
 ETC <- 2
-r <- 2
-nsim <- 100 # Set to a small number for demonstration
+r <- 1
+nsim <- 10 # Set to a small number for demonstration
 Intercept <- 10
 w_names <- paste0("w", 1:HTC)
 s_names <- paste0("s", 1:ETC)

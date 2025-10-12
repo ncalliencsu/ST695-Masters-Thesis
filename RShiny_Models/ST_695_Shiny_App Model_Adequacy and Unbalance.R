@@ -202,14 +202,29 @@ server <- function(input, output, session) {
       if (length(rows_to_remove) > 0) {
         df_rep_S <- df_rep_S[-rows_to_remove, ]
         WP <- WP[-rows_to_remove]
-        if (exists("df_rep_W")) {
-          df_rep_W <- df_rep_W[-rows_to_remove, ]
-        }
         X_S <- X_S[-rows_to_remove, ]
         X_W <- X_W[-rows_to_remove, ]
         X_SW <- X_SW[-rows_to_remove, ]
+        # --- ADD THIS CHECK HERE ---
+        wp_counts <- table(WP)
+        if (any(wp_counts == 0)) {
+          showModal(modalDialog(
+            title = "Invalid Unbalanced Design",
+            "Error: At least one whole plot has no subplots remaining. Please adjust your row selection.",
+            easyClose = TRUE
+          ))
+          return(NULL)
+        }
       }
     }
+      # Print row counts after unbalanced design removal
+      cat("After unbalanced design removal:\n")
+      cat("Rows df_rep_S:", nrow(df_rep_S), "\n")
+      cat("Length WP:", length(WP), "\n")
+      cat("Rows X_S:", nrow(X_S), "\n")
+      cat("Rows X_W:", nrow(X_W), "\n")
+      cat("Rows X_SW:", nrow(X_SW), "\n")
+      cat("Rows df_rep_W (should be unchanged):", nrow(df_rep_W), "\n")
     # Calculate means for S and W models
     df_S <- df_rep_S
     df_W <- df_rep_W
