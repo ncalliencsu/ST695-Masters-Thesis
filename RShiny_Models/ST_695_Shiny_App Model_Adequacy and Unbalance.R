@@ -205,7 +205,7 @@ server <- function(input, output, session) {
         X_S <- X_S[-rows_to_remove, ]
         X_W <- X_W[-rows_to_remove, ]
         X_SW <- X_SW[-rows_to_remove, ]
-        # --- ADD THIS CHECK HERE ---
+        # --- CHECK ON SUBPLOTS ---
         wp_counts <- table(WP)
         if (any(wp_counts == 0)) {
           showModal(modalDialog(
