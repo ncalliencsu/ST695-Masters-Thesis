@@ -1,8 +1,7 @@
 ---
 title: "ST695_SPD_Analysis"
-format: latex
+format: docx
 editor: visual
-date: today
 ---
 
 **Instantiate Libraries**
@@ -46,7 +45,7 @@ formula_2A <- as.formula(paste("Y_S ~ (",
 Method_2A <- summary(lmer(formula_2A, data = Ys_data))
 Method_2A
 ```
-**Method 2B (Restricted Maximum Likelihood using Kenward Roger)**
+**Method 2B (Restricted Maximum Likelihood using Kenward Roger with 2-Way Interactions)**
 ```{r}
 # Model with all main effects, 2-way interactions, and random WP effect
 formula_2B <- as.formula(paste("Y_S ~ (", 
@@ -56,6 +55,22 @@ model_2B <- lmer(formula_2B, data = Ys_data, REML = TRUE)
 Method_2B <- summary(model_2B, ddf = "Kenward-Roger")
 Method_2B
 ```
+```{r}
+
+```
+
+
+**Method 2C (Restricted Maximum Likelihood using Kenward Roger with 3-Way Interactions)**
+```{r}
+# Model with all main effects, 3-way interactions without T:P:S, and random WP effect
+formula_2C <- Y_S ~ (T + P + S + D + R)^3 - T:P:S + (1|WP)
+# Fit model with Kenward-Roger method
+model_2C <- lmer(formula_2C, data = Ys_data, REML = TRUE)
+Method_2C <- summary(model_2C, ddf = "Kenward-Roger")
+Method_2C
+
+```
+
 
 **Method 4A ANOVA using Base R**
 ```{r S Model by ANOVA}
@@ -63,6 +78,7 @@ Method_2B
 #and split-plot error structure
 formula_4A <- as.formula(paste("Y_S ~ (", 
     paste(linear_terms, collapse = " + "),")^2 + Error(WP)"))
+
 Method_4A <- summary(aov(formula_4A, data = Ys_data))
 Method_4A
 ```
@@ -379,6 +395,7 @@ halfnormal(
   labs = SP_effects_names,
   alpha = 1
 )
+
 # plot4 - SP Lenth Plot
 LenthPlot(SP_effects, main = "Lenth Plot for S Model: SP Effects")
 dev.off()
@@ -449,8 +466,8 @@ effects_7W <- coef(model_7W)[-1]  # Remove intercept
 LenthPlot(effects_7W, main = "Lenth Plot for W Model")
 ```
 
-**Method 8 Sequential Split Plot Method**
-```{r W Model and S-W Model}
+**Method 8A Sequential Split Plot Method with 2-way Interactions**
+```{r W Model and S-W Model (2-way)}
 #-----------------------------------------------------------
 #S Model - SP Factors (WP main effects, SP main effects, 
 #2-way interactions within WP and SP and 2-way interactions 
@@ -494,7 +511,7 @@ SW_Model_summary
 
 ```
 
-**SSPD Method Model Adequacy Test**
+**SSPD Method Model Adequacy Test for Method 8A**
 ```{r SSPD Method Model Adequacy Test}
 
 # Perform F-test using ANOVA
@@ -531,6 +548,81 @@ SW_Model_2_summary
 
 model_adequacy <- anova(SW_Model_1, SW_Model_2)
 print(model_adequacy)
+
+```
+
+**Method 8B Sequential Split Plot Method with Three-Way Interactions**
+```{r W Model and S-W Model (3-way)}
+SP_effects_names <- c(
+  "D",
+  "R",
+  "D:R",
+  "T:D", 
+  "P:D",
+  "S:D",
+  "T:R",
+  "P:R",
+  "S:R",
+  "T:D:R",
+  "P:D:R",
+  "S:D:R",
+  "T:P:D",
+  "T:S:D",
+  "P:S:D",
+  "T:P:R",
+  "T:S:R",
+  "P:S:R")
+#-----------------------------------------------------------
+#S Model - SP Factors (WP main effects, SP main effects, 
+#and all 2-way and 3-way interactions (10 three-way interactions)
+formula_S <- as.formula(paste("Y_S ~ (", paste(linear_terms, 
+                                  collapse = " + "),")^3"))
+#Create model matrix for S Model
+Y_S <- Ys_data$Y_S
+X_S <- model.matrix(formula_S, data = Ys_data)
+#-----------------------------------------------------------
+#W Model - WP factors (main WP effects, 2-way interactions)
+formula_W <- as.formula(paste("Y_W ~ (", 
+              paste(WP_factors, collapse = " + "),")^2"))
+
+#Create model matrix for W Model
+X_W <- model.matrix(formula_W, data = Yw_data)
+# Replicate each row 4 times and drop row 20.
+X_W <- X_W[rep(1:nrow(X_W), each = 4), ][-20, ]
+
+Y_W <- rep(Yw_data$Y_W, each = 4)[-20]
+df_W <- data.frame(Y_W, X_W)
+
+cat("Linear Model Fit for W Model (OLS)", "\n")
+W_Model <- summary(lm(formula_W, data = Yw_data))
+W_Model
+#------------------------------------------------------------
+
+
+#S-W Model by Satterwaithe
+#Create model matrix for S-W Model
+
+X_SW <- X_S[, SP_effects_names]
+Y_SW <- Y_S - Y_W
+df_SW <- data.frame(Y_SW, X_SW, check.names = FALSE)
+  
+formula_SW <- as.formula(
+  "Y_SW ~ D + R +
+   `D:R` + `T:D` + `P:D` + `S:D` + `T:R` + `P:R` + `S:R` +
+   `T:D:R` + `P:D:R` + `S:D:R` + `T:P:D` + `T:S:D` + `P:S:D` + `T:P:R` + `T:S:R` + `P:S:R`")
+
+SW_Model <-lm(formula_SW, data = df_SW)
+
+cat("\n")
+cat("Linear Model Fit for SW1 Model (OLS)", "\n")
+SW_Model_summary <- summary(SW_Model)
+SW_Model_summary
+#-------------------------------------------------------------
+
+```
+
+
+
 
 
 ```

@@ -22,15 +22,19 @@ ui <- fluidPage(
       numericInput("r", "r (positive integer):", value = 2, min = 1, step = 1),
       numericInput("nsim", "nsim (positive integer):", value = 100, min = 1, step = 1),
       numericInput("Intercept", "Intercept (real number):", value = 10),
+
       # Dynamic UI for x, z, and interaction inputs
       uiOutput("x_inputs"),
       uiOutput("z_inputs"),
       uiOutput("interaction_inputs"),
+
       # Numeric inputs for variance parameters
       numericInput("sigma2_W", "sigma2_W (positive real):", value = 1, min = 0, step = 0.01),
       numericInput("sigma2_S", "sigma2_S (positive real):", value = 5, min = 0, step = 0.01),
+
       # Button to run the simulation
       actionButton("submit", "Run Simulation"),
+
       # Model Inadequate UI (moved to bottom)
       checkboxInput("model_inadequate", "Model Inadequate", value = FALSE),
       conditionalPanel(
@@ -50,10 +54,12 @@ ui <- fluidPage(
       mainPanel(
       tabsetPanel(
         tabPanel("Summary & Plots",
-          h4("Summary Table:"),
+          h4("Summary Table:"), #h4 means 4th level header
           h4("Overlaid Histograms:"),
+
           # Output area for histograms
           uiOutput("all_histograms"),
+
           # Download buttons for results
           #downloadButton("download_summary", "Download Summary"),
           downloadButton("download_histograms", "Download Histograms (PDF)"),
